@@ -3,3 +3,10 @@ dist/
 .env
 .DS_Store
 coverage/
+
+# Agent / workflow helper files
+AGENTS.md
+PROMPT.md
+TODO.md
+completed.md
+progress.json

@@ -59,7 +59,6 @@ const RouteSchema = new Schema<IRoute>(
       },
       coordinates: {
         type: [[Number]],
-        required: true,
         default: [],
       },
     },
@@ -103,8 +102,13 @@ const RouteSchema = new Schema<IRoute>(
 /**
  * 2dsphere index on geometry — MANDATORY for all geospatial queries.
  * Rule 2.2: Never run geospatial queries on unindexed fields.
+ * Partial filter: only index completed routes — active routes start with
+ * empty coordinates which are invalid for 2dsphere indexing.
  */
-RouteSchema.index({ geometry: '2dsphere' });
+RouteSchema.index(
+  { geometry: '2dsphere' },
+  { partialFilterExpression: { status: 'completed' } },
+);
 
 /**
  * Compound index for user route lookups by status.

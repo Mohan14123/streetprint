@@ -1,24 +1,29 @@
 /**
  * server.ts — Application entry point.
  *
- * Rule 1.1: process.on('uncaughtException') and process.on('unhandledRejection')
- *           MUST be registered first, before any other code.
- * Rule 8:   Graceful shutdown sequence is strictly ordered.
- * Rule 9.3: No console.log — Winston logger only.
+ * Rule 1.1:  process.on('uncaughtException') and process.on('unhandledRejection')
+ *            MUST be registered FIRST, before any other code runs.
+ * Rule 8:    Graceful shutdown sequence is strictly ordered:
+ *              a. server.close()            — stop accepting new HTTP connections
+ *              b. 10s deadline for in-flight requests
+ *              c. routeWriterQueue.close()  — finish current job, stop new ones
+ *              d. closeDB()                 — close MongoDB
+ *              e. closeRedis()              — close Redis
+ *              f. log "Shutdown complete"    → process.exit(0)
+ * Rule 9.3:  No console.log — Winston logger only.
+ * Rule 10.3: No hardcoded values — thresholds from env.ts.
  *
  * Import order note: TypeScript/Node.js hoists `import` statements to the top
  * of the module regardless of where they appear in the file. To guarantee that
- * error handlers are the very first *runtime* logic executed, we use require()
- * for the logger so the handler registration happens before any ESM-style
- * side-effects (queue creation, env parsing, etc.) from other imports run.
+ * error handlers are the very first *runtime* logic executed, we import the
+ * logger first (it has no side-effects that depend on other services).
  * All subsequent imports use normal ES `import` syntax below the handlers.
  */
 
-// ─── Step 0: Bootstrap logger synchronously before anything else ──────────────
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+// ─── Step 0: Bootstrap logger before anything else ─────────────────────────────
 import logger from './src/config/logger';
 
-// ─── Step 1: Register global error boundaries FIRST ────────────────────────────
+// ─── Step 1: Register global error boundaries FIRST (Rule 1.1) ─────────────────
 process.on('uncaughtException', (err: Error) => {
   logger.error('[process] Uncaught Exception — initiating graceful shutdown', {
     error: err.message,
@@ -37,7 +42,7 @@ process.on('unhandledRejection', (reason: unknown) => {
   void gracefulShutdown(1);
 });
 
-// ─── Step 2: All other imports (hoisted, but handlers above catch their errors) ─
+// ─── Step 2: All other imports ─────────────────────────────────────────────────
 import http from 'http';
 import app from './src/app';
 import { env } from './src/config/env';
@@ -46,19 +51,24 @@ import { connectRedis, closeRedis } from './src/config/redis';
 import { routeWriterQueue } from './src/services/queue.service';
 import { startRouteWriterWorker } from './src/jobs/routeWriter.job';
 
+// ─── Constants ─────────────────────────────────────────────────────────────────
+const SHUTDOWN_DEADLINE_MS = 10_000;
+
 // ─── HTTP server instance ──────────────────────────────────────────────────────
 const server = http.createServer(app);
 let isShuttingDown = false;
 
-// ─── Graceful shutdown ─────────────────────────────────────────────────────────
+// ─── Graceful shutdown (Rule 8) ────────────────────────────────────────────────
 /**
- * Strict shutdown sequence (Rule 8):
+ * Strictly-ordered shutdown sequence:
  *   a. server.close()            — stop accepting new HTTP connections
- *   b. wait for in-flight reqs   — up to 10 s deadline
+ *   b. wait for in-flight reqs   — up to SHUTDOWN_DEADLINE_MS
  *   c. routeWriterQueue.close()  — finish current job, stop new ones
  *   d. closeDB()                 — close MongoDB
  *   e. closeRedis()              — close Redis
  *   f. log "Shutdown complete"   — then exit
+ *
+ * If the deadline is exceeded → log warning → process.exit(1).
  */
 async function gracefulShutdown(exitCode: number = 0): Promise<void> {
   if (isShuttingDown) return;
@@ -66,51 +76,58 @@ async function gracefulShutdown(exitCode: number = 0): Promise<void> {
 
   logger.info('[server] Initiating graceful shutdown sequence…');
 
-  // 10-second hard deadline
+  // Hard deadline: if cleanup takes longer than 10s, force exit with warning
   const deadlineTimer = setTimeout(() => {
-    logger.warn('[server] Shutdown deadline exceeded (10 s) — forcing exit');
+    logger.warn(
+      '[server] Shutdown deadline exceeded — forcing exit',
+      { deadlineMs: SHUTDOWN_DEADLINE_MS },
+    );
     process.exit(1);
-  }, 10_000);
-
-  // Ensure the timer does not prevent the process from exiting on its own
-  if (deadlineTimer.unref) deadlineTimer.unref();
+  }, SHUTDOWN_DEADLINE_MS);
 
   try {
     // a. Stop accepting new HTTP connections; wait for in-flight requests
-    logger.info('[server] [1/4] Closing HTTP server…');
+    logger.info('[server] [1/5] Closing HTTP server…');
     await new Promise<void>((resolve) => {
-      server.close((err) => {
+      server.close((err?: Error) => {
         if (err && err.message !== 'Server is not running.') {
-          logger.warn('[server] HTTP server close warning', { error: err.message });
+          logger.warn('[server] HTTP server close warning', {
+            error: err.message,
+          });
         }
         resolve();
       });
     });
 
     // c. Drain queue (stop new jobs, let current one finish)
-    logger.info('[server] [2/4] Closing routeWriterQueue…');
+    logger.info('[server] [2/5] Closing routeWriterQueue…');
     await routeWriterQueue.close();
 
     // d. Close MongoDB
-    logger.info('[server] [3/4] Closing MongoDB…');
+    logger.info('[server] [3/5] Closing MongoDB…');
     await closeDB();
 
     // e. Close Redis
-    logger.info('[server] [4/4] Closing Redis…');
+    logger.info('[server] [4/5] Closing Redis…');
     await closeRedis();
 
+    // f. All clean — cancel the deadline and exit normally
     clearTimeout(deadlineTimer);
-    logger.info('[server] Shutdown complete');
+    logger.info('[server] [5/5] Shutdown complete');
     process.exit(exitCode);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     const stack = err instanceof Error ? err.stack : undefined;
-    logger.error('[server] Error during graceful shutdown', { error: message, stack });
+    logger.error('[server] Error during graceful shutdown', {
+      error: message,
+      stack,
+    });
+    clearTimeout(deadlineTimer);
     process.exit(1);
   }
 }
 
-// ─── Signal handlers ───────────────────────────────────────────────────────────
+// ─── Signal handlers (Rule 8) ──────────────────────────────────────────────────
 process.on('SIGTERM', () => {
   logger.info('[process] SIGTERM received');
   void gracefulShutdown(0);
@@ -121,16 +138,31 @@ process.on('SIGINT', () => {
   void gracefulShutdown(0);
 });
 
-// ─── Startup ───────────────────────────────────────────────────────────────────
+// ─── Startup sequence ──────────────────────────────────────────────────────────
+/**
+ * Boot order:
+ *   1. Connect to MongoDB (Rule 2.1: must be connected before serving traffic)
+ *   2. Connect to Redis (non-fatal — caching disabled if unavailable)
+ *   3. Start the Bull queue worker
+ *   4. server.listen() — ONLY here, never in app.ts
+ */
 async function startServer(): Promise<void> {
   try {
+    // 1. MongoDB — mandatory, exits on failure
     await connectDB();
+
+    // 2. Redis — optional infrastructure
     await connectRedis();
 
+    // 3. Start queue worker
     startRouteWriterWorker();
 
+    // 4. Start HTTP server — only in server.ts (Rule 1.1)
     server.listen(env.PORT, () => {
-      logger.info(`[server] Listening on port ${env.PORT} in ${env.NODE_ENV} mode`);
+      logger.info('[server] Listening', {
+        port: env.PORT,
+        environment: env.NODE_ENV,
+      });
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);

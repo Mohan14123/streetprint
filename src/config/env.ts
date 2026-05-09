@@ -5,6 +5,7 @@
  * Rule 10.3: No hardcoded values — everything comes from here.
  * Never use process.env.* directly in service/controller code.
  */
+import 'dotenv/config';
 import { z } from 'zod';
 
 const envSchema = z.object({

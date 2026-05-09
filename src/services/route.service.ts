@@ -126,7 +126,8 @@ export async function updateRoute(
   let rejected = 0;
 
   // Get the last stored coordinate to compare against for noise filtering
-  const lastStored = route.geometry.coordinates.slice(-1)[0] as [number, number] | undefined;
+  const coords = route.geometry.coordinates ?? [];
+  const lastStored = coords.slice(-1)[0] as [number, number] | undefined;
   let prevCoord: [number, number] | undefined = lastStored;
 
   for (const coord of rawCoordinates) {
