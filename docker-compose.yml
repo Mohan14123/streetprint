@@ -40,18 +40,36 @@ services:
   # ── API ─────────────────────────────────────────────────────
   api:
     build:
-      context: .
+      context: ./backend
       dockerfile: Dockerfile
     container_name: route-memory-api
     ports:
       - "${PORT:-3000}:${PORT:-3000}"
     env_file:
-      - .env
+      - ./backend/.env
+    environment:
+      - NODE_ENV=production
+      - CLIENT_URL=${CLIENT_URL}
     depends_on:
       mongo:
         condition: service_healthy
       redis:
         condition: service_healthy
+    restart: unless-stopped
+
+  # ── Frontend ─────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: route-memory-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+    environment:
+      # Empty in prod — nginx proxy handles /api/* → backend service
+      - VITE_API_URL=
     restart: unless-stopped
 
 volumes:

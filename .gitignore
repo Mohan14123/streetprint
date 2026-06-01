@@ -1,13 +1,66 @@
+# ──────────────────────────────────────────────
+# Dependencies
+# ──────────────────────────────────────────────
 node_modules/
-dist/
-.env
-.DS_Store
-coverage/
+**/node_modules/
 
-# Agent / workflow helper files
+# ──────────────────────────────────────────────
+# Build outputs
+# ──────────────────────────────────────────────
+dist/
+**/dist/
+frontend/public/sw.js
+frontend/public/sw.js.map
+
+# ──────────────────────────────────────────────
+# Environment files — NEVER commit secrets
+# ──────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+backend/.env
+frontend/.env
+
+# ──────────────────────────────────────────────
+# Test & coverage
+# ──────────────────────────────────────────────
+coverage/
+*.lcov
+.nyc_output/
+
+# ──────────────────────────────────────────────
+# Logs
+# ──────────────────────────────────────────────
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ──────────────────────────────────────────────
+# OS & editor
+# ──────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/settings.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ──────────────────────────────────────────────
+# Agent / workflow helper files (not for repo)
+# ──────────────────────────────────────────────
 AGENTS.md
 PROMPT.md
 TODO.md
 completed.md
 progress.json
 improvements_needed.md
+leftoff.md
+list.md
+backend_todo.md
+RULES.md
+git_status.txt
