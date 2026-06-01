@@ -13,9 +13,9 @@
  *   yet_to_finish §1G: Real routes in bottom sheet from routeApi.list()
  *   RULES.md §5.1: Coordinates displayed as [lat, lng] on Leaflet (reversed from GeoJSON)
  */
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, Square, Loader2, X, Crosshair, User, Layers } from 'lucide-react';
+import { Search, Square, Loader2, X, Crosshair, User, Layers, Bookmark, Clock } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Circle, CircleMarker, Polyline, Popup, useMap, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -26,6 +26,7 @@ import { heatmapApi } from '../../api/heatmap.api';
 import { useAuth } from '../../auth/AuthContext';
 import { fetchPOIs, getPOICategoryInfo } from '../../api/overpassApi';
 import type { OverpassPOI } from '../../api/overpassApi';
+import { placesApi } from '../../api/places.api';
 
 // Fix for default marker icon in leaflet
 delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
@@ -112,6 +113,54 @@ const MOTION_BADGE_MAP: Record<string, { label: string; color: string }> = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Speed-based color gradient (M7)
+// Maps speed ratio (0-1) from yellow (slow) → green (medium) → cyan (fast)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function speedToColor(speedRatio: number): string {
+  // Clamp to [0, 1]
+  const t = Math.max(0, Math.min(1, speedRatio));
+  // Yellow (#eab308) → Green (#22c55e) → Cyan (#22d3ee)
+  if (t < 0.5) {
+    const s = t * 2; // 0 → 1 within first half
+    const r = Math.round(234 * (1 - s) + 34 * s);
+    const g = Math.round(179 * (1 - s) + 197 * s);
+    const b = Math.round(8 * (1 - s) + 94 * s);
+    return `rgb(${r},${g},${b})`;
+  } else {
+    const s = (t - 0.5) * 2; // 0 → 1 within second half
+    const r = Math.round(34 * (1 - s) + 34 * s);
+    const g = Math.round(197 * (1 - s) + 211 * s);
+    const b = Math.round(94 * (1 - s) + 238 * s);
+    return `rgb(${r},${g},${b})`;
+  }
+}
+
+// Haversine between two [lat, lng] Leaflet-order points (for speed calc)
+function haversineLatLng(a: [number, number], b: [number, number]): number {
+  const R = 6_371_000;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(b[0] - a[0]);
+  const dLng = toRad(b[1] - a[1]);
+  const a2 =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(a[0])) * Math.cos(toRad(b[0])) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a2), Math.sqrt(1 - a2));
+}
+
+// Compute bearing between two [lat, lng] points for direction arrows (M8)
+function computeBearing(a: [number, number], b: [number, number]): number {
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const toDeg = (r: number) => (r * 180) / Math.PI;
+  const dLng = toRad(b[1] - a[1]);
+  const lat1 = toRad(a[0]);
+  const lat2 = toRad(b[0]);
+  const y = Math.sin(dLng) * Math.cos(lat2);
+  const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+  return (toDeg(Math.atan2(y, x)) + 360) % 360;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Heatmap + Search types
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -126,9 +175,50 @@ interface NominatimResult {
   display_name: string;
   lat: string;
   lon: string;
+  type?: string;
+  class?: string;
 }
 
 const SEARCH_DEBOUNCE_MS = 600;
+const SEARCH_HISTORY_KEY = 'streetprint_search_history';
+const MAX_SEARCH_HISTORY = 8;
+
+// Category emoji based on Nominatim result type/class
+function getSearchResultEmoji(type?: string, cls?: string): string {
+  if (cls === 'amenity') {
+    if (type === 'restaurant' || type === 'cafe' || type === 'fast_food') return '🍴';
+    if (type === 'hospital' || type === 'clinic' || type === 'pharmacy') return '🏥';
+    if (type === 'school' || type === 'university' || type === 'college') return '🎓';
+    if (type === 'fuel') return '⛽';
+    if (type === 'bank' || type === 'atm') return '🏦';
+    if (type === 'parking') return '🅿️';
+    return '📍';
+  }
+  if (cls === 'tourism') {
+    if (type === 'hotel' || type === 'hostel') return '🏨';
+    if (type === 'attraction' || type === 'museum') return '🏛️';
+    return '🗺️';
+  }
+  if (cls === 'shop') return '🛒';
+  if (cls === 'highway') return '🛣️';
+  if (cls === 'railway') return '🚂';
+  if (cls === 'building') return '🏢';
+  if (cls === 'place') {
+    if (type === 'city' || type === 'town') return '🏙️';
+    if (type === 'village' || type === 'hamlet') return '🏘️';
+    if (type === 'country') return '🌍';
+    if (type === 'state' || type === 'county') return '📌';
+    return '📍';
+  }
+  if (cls === 'natural') return '🌿';
+  if (cls === 'leisure') {
+    if (type === 'park') return '🌳';
+    if (type === 'stadium') return '🏟️';
+    return '🎭';
+  }
+  if (cls === 'waterway') return '💧';
+  return '📍';
+}
 
 // Color ramps for heatmap modes
 const HEATMAP_COLORS: Record<string, { fill: string; stroke: string }> = {
@@ -327,6 +417,93 @@ export function MapView() {
   // ── Polyline positions (GeoJSON [lng,lat] → Leaflet [lat,lng]) ─────────────
   const polylinePositions: [number, number][] = tracking.liveRoute.map(([lng, lat]) => [lat, lng]);
 
+  // ── Zoom state (used by M6, M8, and heatmap radius) ───────────────────────
+  const [currentZoom, setCurrentZoom] = useState(15);
+  const handleZoomChange = useCallback((zoom: number) => {
+    setCurrentZoom(zoom);
+  }, []);
+
+  // ── M5: Animated progressive route reveal ──────────────────────────────────
+  const [revealedCount, setRevealedCount] = useState(0);
+  const animFrameRef = useRef<ReturnType<typeof requestAnimationFrame> | null>(null);
+
+  useEffect(() => {
+    if (polylinePositions.length <= revealedCount) {
+      setRevealedCount(polylinePositions.length);
+      return;
+    }
+    let current = revealedCount;
+    const target = polylinePositions.length;
+    const step = () => {
+      current = Math.min(current + 2, target);
+      setRevealedCount(current);
+      if (current < target) {
+        animFrameRef.current = requestAnimationFrame(step);
+      }
+    };
+    animFrameRef.current = requestAnimationFrame(step);
+    return () => {
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [polylinePositions.length]);
+
+  useEffect(() => {
+    if (!tracking.isTracking) setRevealedCount(0);
+  }, [tracking.isTracking]);
+
+  const revealedPositions = polylinePositions.slice(0, revealedCount);
+
+  // ── M6: Zoom-based line width ──────────────────────────────────────────────
+  const routeLineWeight = useMemo(() => {
+    if (currentZoom >= 17) return 6;
+    if (currentZoom >= 15) return 5;
+    if (currentZoom >= 13) return 4;
+    if (currentZoom >= 10) return 3;
+    return 2;
+  }, [currentZoom]);
+
+  // ── M7: Speed-based gradient polyline segments ─────────────────────────────
+  const speedSegments = useMemo(() => {
+    if (revealedPositions.length < 2) return [];
+    const segments: { positions: [number, number][]; color: string }[] = [];
+    const speeds: number[] = [];
+    for (let i = 1; i < revealedPositions.length; i++) {
+      const dist = haversineLatLng(revealedPositions[i - 1], revealedPositions[i]);
+      speeds.push(dist);
+    }
+    const maxSpeed = Math.max(1, ...speeds);
+    for (let i = 0; i < speeds.length; i++) {
+      const ratio = speeds[i] / maxSpeed;
+      segments.push({
+        positions: [revealedPositions[i], revealedPositions[i + 1]],
+        color: speedToColor(ratio),
+      });
+    }
+    return segments;
+  }, [revealedPositions]);
+
+  // ── M8: Direction arrows at intervals along the polyline ───────────────────
+  const directionArrows = useMemo(() => {
+    if (revealedPositions.length < 3) return [];
+    const interval = currentZoom >= 16 ? 5 : currentZoom >= 13 ? 10 : 20;
+    const arrows: { position: [number, number]; bearing: number }[] = [];
+    for (let i = interval; i < revealedPositions.length - 1; i += interval) {
+      const bearing = computeBearing(revealedPositions[i - 1], revealedPositions[i]);
+      arrows.push({ position: revealedPositions[i], bearing });
+    }
+    return arrows;
+  }, [revealedPositions, currentZoom]);
+
+  const createArrowIcon = useCallback((bearing: number) => {
+    return L.divIcon({
+      className: 'route-arrow-icon',
+      html: `<div style="width:16px;height:16px;display:flex;align-items:center;justify-content:center;transform:rotate(${bearing}deg);font-size:12px;color:#22d3ee;filter:drop-shadow(0 0 2px rgba(34,211,238,0.6));pointer-events:none;">▲</div>`,
+      iconSize: [16, 16],
+      iconAnchor: [8, 8],
+    });
+  }, []);
+
   // ── Motion badge ───────────────────────────────────────────────────────────
   const motionBadge = MOTION_BADGE_MAP[tracking.currentMotionState] ?? MOTION_BADGE_MAP.walking;
 
@@ -363,10 +540,6 @@ export function MapView() {
   const maxIntensity = Math.max(1, ...heatmapPoints.map(p => p.intensity));
 
   // Zoom-aware heatmap radius: larger at low zoom, smaller at high zoom
-  const [currentZoom, setCurrentZoom] = useState(15);
-  const handleZoomChange = useCallback((zoom: number) => {
-    setCurrentZoom(zoom);
-  }, []);
   const heatmapBaseRadius = (() => {
     // At zoom 15: base=30, max scale factor=120
     // At zoom 3: base=2000, max scale factor=5000
@@ -376,6 +549,32 @@ export function MapView() {
     if (currentZoom >= 6) return { base: 1000, scale: 3000 };
     return { base: 2000, scale: 5000 };
   })();
+
+  // ── M10: Search history (localStorage) ───────────────────────────────────
+  const [searchHistory, setSearchHistory] = useState<{ name: string; lat: string; lon: string }[]>(() => {
+    try {
+      const saved = localStorage.getItem(SEARCH_HISTORY_KEY);
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
+  const [showHistory, setShowHistory] = useState(false);
+
+  const addToSearchHistory = useCallback((name: string, lat: string, lon: string) => {
+    setSearchHistory(prev => {
+      const filtered = prev.filter(h => h.name !== name);
+      const updated = [{ name, lat, lon }, ...filtered].slice(0, MAX_SEARCH_HISTORY);
+      localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
+  const removeFromHistory = useCallback((name: string) => {
+    setSearchHistory(prev => {
+      const updated = prev.filter(h => h.name !== name);
+      localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
 
   // ── Nominatim search ──────────────────────────────────────────────────────
   const [searchQuery, setSearchQuery] = useState('');
@@ -387,6 +586,7 @@ export function MapView() {
   const handleSearchChange = useCallback((value: string) => {
     setSearchQuery(value);
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    setShowHistory(false);
 
     if (!value.trim()) {
       setSearchResults([]);
@@ -397,7 +597,7 @@ export function MapView() {
       setSearchLoading(true);
       try {
         const resp = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(value)}&limit=5`,
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(value)}&limit=5&addressdetails=1`,
           { headers: { 'User-Agent': 'RouteMemoryApp/1.0' } },
         );
         const data = (await resp.json()) as NominatimResult[];
@@ -413,15 +613,50 @@ export function MapView() {
   const handleSearchSelect = useCallback((result: NominatimResult) => {
     const target: [number, number] = [parseFloat(result.lat), parseFloat(result.lon)];
     setSearchFlyTarget(target);
-    setSearchQuery(result.display_name.split(',')[0]);
+    const shortName = result.display_name.split(',')[0];
+    setSearchQuery(shortName);
     setSearchResults([]);
+    setShowHistory(false);
+    addToSearchHistory(shortName, result.lat, result.lon);
+  }, [addToSearchHistory]);
+
+  const handleHistorySelect = useCallback((item: { name: string; lat: string; lon: string }) => {
+    const target: [number, number] = [parseFloat(item.lat), parseFloat(item.lon)];
+    setSearchFlyTarget(target);
+    setSearchQuery(item.name);
+    setShowHistory(false);
+  }, []);
+
+  // M10: Save place directly from search results
+  const [savingPlaceId, setSavingPlaceId] = useState<number | null>(null);
+  const handleSaveFromSearch = useCallback(async (result: NominatimResult) => {
+    setSavingPlaceId(result.place_id);
+    try {
+      await placesApi.save({
+        label: result.display_name.split(',')[0],
+        lat: parseFloat(result.lat),
+        lng: parseFloat(result.lon),
+        notes: result.type ? `${result.type} (${result.class ?? 'place'})` : undefined,
+      });
+    } catch {
+      // Non-fatal
+    } finally {
+      setSavingPlaceId(null);
+    }
   }, []);
 
   const clearSearch = useCallback(() => {
     setSearchQuery('');
     setSearchResults([]);
     setSearchFlyTarget(null);
+    setShowHistory(false);
   }, []);
+
+  const handleSearchFocus = useCallback(() => {
+    if (!searchQuery.trim() && searchHistory.length > 0) {
+      setShowHistory(true);
+    }
+  }, [searchQuery, searchHistory.length]);
 
   // ── Re-center handler ─────────────────────────────────────────────────────
   const [recenterKey, setRecenterKey] = useState(0);
@@ -477,6 +712,10 @@ export function MapView() {
   const routeStartPosition: [number, number] | null =
     polylinePositions.length > 0 ? polylinePositions[0] : null;
 
+  // M4: Route end position for marker (red dot)
+  const routeEndPosition: [number, number] | null =
+    revealedPositions.length > 1 ? revealedPositions[revealedPositions.length - 1] : null;
+
   // Bottom sheet Y positions
   const sheetY = sheetState === 'expanded' ? 0 : sheetState === 'half' ? 'calc(100% - 45vh)' : 'calc(100% - 130px)';
 
@@ -512,26 +751,60 @@ export function MapView() {
             {/* Current Location Marker */}
             {displayPosition && <Marker position={displayPosition} icon={pulsingIcon} />}
 
-            {/* Live route polyline */}
-            {polylinePositions.length > 1 && (
+            {/* Live route polyline — M7: speed-based color gradient segments */}
+            {speedSegments.length > 0 ? (
+              speedSegments.map((seg, i) => (
+                <Polyline
+                  key={`seg-${i}`}
+                  positions={seg.positions}
+                  pathOptions={{
+                    color: seg.color,
+                    weight: routeLineWeight,  /* M6: zoom-based width */
+                    opacity: 0.9,
+                    lineCap: 'round',
+                    lineJoin: 'round',
+                  }}
+                />
+              ))
+            ) : revealedPositions.length > 1 ? (
+              /* Fallback: single-color line if less than 2 segments */
               <Polyline
-                positions={polylinePositions}
+                positions={revealedPositions}
                 pathOptions={{
                   color: '#22d3ee',
-                  weight: 4,
+                  weight: routeLineWeight,
                   opacity: 0.9,
                   lineCap: 'round',
                   lineJoin: 'round',
                 }}
               />
-            )}
+            ) : null}
+
+            {/* M8: Direction arrows along the polyline */}
+            {tracking.isTracking && directionArrows.map((arrow, i) => (
+              <Marker
+                key={`arrow-${i}`}
+                position={arrow.position}
+                icon={createArrowIcon(arrow.bearing)}
+                interactive={false}
+              />
+            ))}
 
             {/* Route start marker (green dot) */}
             {routeStartPosition && tracking.isTracking && (
               <CircleMarker
                 center={routeStartPosition}
+                radius={8}
+                pathOptions={{ color: '#16a34a', fillColor: '#22c55e', fillOpacity: 1, weight: 3 }}
+              />
+            )}
+
+            {/* M4: Route end marker (red dot) — visible during tracking */}
+            {routeEndPosition && tracking.isTracking && (
+              <CircleMarker
+                center={routeEndPosition}
                 radius={7}
-                pathOptions={{ color: '#22c55e', fillColor: '#22c55e', fillOpacity: 1, weight: 2 }}
+                pathOptions={{ color: '#dc2626', fillColor: '#ef4444', fillOpacity: 1, weight: 2 }}
               />
             )}
 
@@ -662,6 +935,8 @@ export function MapView() {
               placeholder="Search places, routes..."
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
+              onFocus={handleSearchFocus}
+              onBlur={() => setTimeout(() => setShowHistory(false), 200)}
               className="bg-transparent border-none outline-none text-sm text-white ml-3 w-full placeholder:text-slate-500"
             />
             {searchQuery && (
@@ -671,18 +946,68 @@ export function MapView() {
             )}
           </div>
 
-          {/* Search results dropdown */}
-          {searchResults.length > 0 && (
+          {/* M10: Search history dropdown (when input focused, no query) */}
+          {showHistory && searchHistory.length > 0 && searchResults.length === 0 && (
             <div className="absolute top-14 left-0 right-0 bg-[#161B22]/95 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-2xl max-h-60 overflow-y-auto">
-              {searchResults.map((result) => (
-                <button
-                  key={result.place_id}
-                  onClick={() => handleSearchSelect(result)}
-                  className="w-full text-left px-4 py-3 hover:bg-white/5 transition-colors border-b border-white/5 last:border-b-0"
+              <div className="px-4 py-2 text-[10px] text-slate-600 uppercase tracking-wider font-semibold">Recent Searches</div>
+              {searchHistory.map((item) => (
+                <div
+                  key={item.name}
+                  className="w-full flex items-center px-4 py-2.5 hover:bg-white/5 transition-colors border-b border-white/5 last:border-b-0 gap-3"
                 >
-                  <p className="text-sm text-white truncate">{result.display_name.split(',')[0]}</p>
-                  <p className="text-xs text-slate-500 truncate mt-0.5">{result.display_name}</p>
-                </button>
+                  <Clock className="w-3.5 h-3.5 text-slate-600 shrink-0" />
+                  <button
+                    onClick={() => handleHistorySelect(item)}
+                    className="flex-1 text-left"
+                  >
+                    <p className="text-sm text-slate-300 truncate">{item.name}</p>
+                  </button>
+                  <button
+                    onClick={() => removeFromHistory(item.name)}
+                    className="text-slate-600 hover:text-slate-300 transition-colors p-1"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* M10: Enhanced search results with category icons + save button */}
+          {searchResults.length > 0 && (
+            <div className="absolute top-14 left-0 right-0 bg-[#161B22]/95 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-2xl max-h-72 overflow-y-auto">
+              {searchResults.map((result) => (
+                <div
+                  key={result.place_id}
+                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors border-b border-white/5 last:border-b-0"
+                >
+                  {/* Category emoji icon */}
+                  <span className="text-base shrink-0">{getSearchResultEmoji(result.type, result.class)}</span>
+                  {/* Result text — click to fly */}
+                  <button
+                    onClick={() => handleSearchSelect(result)}
+                    className="flex-1 text-left min-w-0"
+                  >
+                    <p className="text-sm text-white truncate">{result.display_name.split(',')[0]}</p>
+                    <p className="text-[11px] text-slate-500 truncate mt-0.5">{result.display_name.split(',').slice(1, 3).join(',')}</p>
+                    {result.type && (
+                      <span className="text-[10px] text-slate-600 capitalize">{result.type.replace(/_/g, ' ')}</span>
+                    )}
+                  </button>
+                  {/* Save to places button */}
+                  <button
+                    onClick={() => handleSaveFromSearch(result)}
+                    disabled={savingPlaceId === result.place_id}
+                    className="text-slate-600 hover:text-cyan-400 transition-colors p-1.5 rounded-lg hover:bg-white/5 shrink-0"
+                    title="Save to places"
+                  >
+                    {savingPlaceId === result.place_id ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Bookmark className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
               ))}
             </div>
           )}
