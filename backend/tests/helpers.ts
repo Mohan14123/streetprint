@@ -22,7 +22,7 @@ export async function createTestUser(
   userId: string;
 }> {
   const res = await supertest(app)
-    .post('/auth/register')
+    .post('/api/auth/register')
     .send({ email, password, displayName })
     .expect(201);
 

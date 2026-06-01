@@ -86,7 +86,7 @@ beforeEach(async () => {
 describe('POST /route/start', () => {
   it('should create a session and return sessionId + routeId', async () => {
     const res = await supertest(app)
-      .post('/route/start')
+      .post('/api/route/start')
       .set('Authorization', `Bearer ${accessToken}`)
       .send({})
       .expect(201);
@@ -111,7 +111,7 @@ describe('POST /route/update', () => {
   it('should reject a noisy GPS point that exceeds 500m jump threshold', async () => {
     // Start a route session first
     const startRes = await supertest(app)
-      .post('/route/start')
+      .post('/api/route/start')
       .set('Authorization', `Bearer ${accessToken}`)
       .send({})
       .expect(201);
@@ -126,7 +126,7 @@ describe('POST /route/update', () => {
     ];
 
     const res = await supertest(app)
-      .post('/route/update')
+      .post('/api/route/update')
       .set('Authorization', `Bearer ${accessToken}`)
       .send({ sessionId, coordinates })
       .expect(200);
@@ -147,7 +147,7 @@ describe('POST /route/end', () => {
   it('should set status to "abandoned" when route has < 3 valid coordinates', async () => {
     // Start a session
     const startRes = await supertest(app)
-      .post('/route/start')
+      .post('/api/route/start')
       .set('Authorization', `Bearer ${accessToken}`)
       .send({})
       .expect(201);
@@ -156,7 +156,7 @@ describe('POST /route/end', () => {
 
     // Send only 2 valid coordinates (below ROUTE_MIN_COORDINATES=3)
     await supertest(app)
-      .post('/route/update')
+      .post('/api/route/update')
       .set('Authorization', `Bearer ${accessToken}`)
       .send({
         sessionId,
@@ -169,7 +169,7 @@ describe('POST /route/end', () => {
 
     // End the route
     const endRes = await supertest(app)
-      .post('/route/end')
+      .post('/api/route/end')
       .set('Authorization', `Bearer ${accessToken}`)
       .send({ sessionId })
       .expect(200);
@@ -181,7 +181,7 @@ describe('POST /route/end', () => {
   it('should set status to "completed" for a valid route with >= 3 coordinates', async () => {
     // Start a session
     const startRes = await supertest(app)
-      .post('/route/start')
+      .post('/api/route/start')
       .set('Authorization', `Bearer ${accessToken}`)
       .send({})
       .expect(201);
@@ -190,7 +190,7 @@ describe('POST /route/end', () => {
 
     // Send 5 valid coordinates (above ROUTE_MIN_COORDINATES=3)
     await supertest(app)
-      .post('/route/update')
+      .post('/api/route/update')
       .set('Authorization', `Bearer ${accessToken}`)
       .send({
         sessionId,
@@ -200,7 +200,7 @@ describe('POST /route/end', () => {
 
     // End the route with tags
     const endRes = await supertest(app)
-      .post('/route/end')
+      .post('/api/route/end')
       .set('Authorization', `Bearer ${accessToken}`)
       .send({ sessionId, tags: ['exploration'] })
       .expect(200);

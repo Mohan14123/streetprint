@@ -74,7 +74,7 @@ describe('Auth middleware — token validation', () => {
     await new Promise((resolve) => setTimeout(resolve, 100));
 
     const res = await supertest(app)
-      .post('/route/start')
+      .post('/api/route/start')
       .set('Authorization', `Bearer ${expiredToken}`)
       .send({})
       .expect(401);
@@ -85,7 +85,7 @@ describe('Auth middleware — token validation', () => {
 
   it('should return 401 when no Authorization header is present', async () => {
     const res = await supertest(app)
-      .post('/route/start')
+      .post('/api/route/start')
       .send({})
       .expect(401);
 
@@ -106,7 +106,7 @@ describe('POST /auth/refresh', () => {
     await new Promise((resolve) => setTimeout(resolve, 1100));
 
     const res = await supertest(app)
-      .post('/auth/refresh')
+      .post('/api/auth/refresh')
       .send({ refreshToken: user.refreshToken })
       .expect(200);
 

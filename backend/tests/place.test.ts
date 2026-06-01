@@ -68,7 +68,7 @@ beforeEach(async () => {
 describe('POST /places/save', () => {
   it('should save a location successfully', async () => {
     const res = await supertest(app)
-      .post('/places/save')
+      .post('/api/places/save')
       .set('Authorization', `Bearer ${accessToken}`)
       .send(TEST_COORDS.place)
       .expect(201);
@@ -87,7 +87,7 @@ describe('POST /places/save', () => {
   it('should return existing place when saving within 10m (no duplicate)', async () => {
     // First save
     const res1 = await supertest(app)
-      .post('/places/save')
+      .post('/api/places/save')
       .set('Authorization', `Bearer ${accessToken}`)
       .send(TEST_COORDS.place)
       .expect(201);
@@ -96,7 +96,7 @@ describe('POST /places/save', () => {
 
     // Second save — within 10m of the first
     const res2 = await supertest(app)
-      .post('/places/save')
+      .post('/api/places/save')
       .set('Authorization', `Bearer ${accessToken}`)
       .send(TEST_COORDS.placeDuplicate)
       .expect(200);

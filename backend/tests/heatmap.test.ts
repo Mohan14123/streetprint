@@ -92,7 +92,7 @@ beforeEach(async () => {
 
   // Create and complete a route so heatmap has data
   const startRes = await supertest(app)
-    .post('/route/start')
+    .post('/api/route/start')
     .set('Authorization', `Bearer ${accessToken}`)
     .send({})
     .expect(201);
@@ -100,13 +100,13 @@ beforeEach(async () => {
   const { sessionId } = startRes.body.data;
 
   await supertest(app)
-    .post('/route/update')
+    .post('/api/route/update')
     .set('Authorization', `Bearer ${accessToken}`)
     .send({ sessionId, coordinates: TEST_COORDS.validSequence })
     .expect(200);
 
   await supertest(app)
-    .post('/route/end')
+    .post('/api/route/end')
     .set('Authorization', `Bearer ${accessToken}`)
     .send({ sessionId })
     .expect(200);
@@ -119,7 +119,7 @@ beforeEach(async () => {
 describe('GET /heatmap', () => {
   it('should return points array, generatedAt, and cached fields', async () => {
     const res = await supertest(app)
-      .get(`/heatmap?bounds=${TEST_COORDS.boundsString}`)
+      .get(`/api/heatmap?bounds=${TEST_COORDS.boundsString}`)
       .set('Authorization', `Bearer ${accessToken}`)
       .expect(200);
 
@@ -135,7 +135,7 @@ describe('GET /heatmap', () => {
   it('should return cached: true on second call with same bounds', async () => {
     // First call — cache miss
     const res1 = await supertest(app)
-      .get(`/heatmap?bounds=${TEST_COORDS.boundsString}`)
+      .get(`/api/heatmap?bounds=${TEST_COORDS.boundsString}`)
       .set('Authorization', `Bearer ${accessToken}`)
       .expect(200);
 
@@ -143,7 +143,7 @@ describe('GET /heatmap', () => {
 
     // Second call — should be from cache
     const res2 = await supertest(app)
-      .get(`/heatmap?bounds=${TEST_COORDS.boundsString}`)
+      .get(`/api/heatmap?bounds=${TEST_COORDS.boundsString}`)
       .set('Authorization', `Bearer ${accessToken}`)
       .expect(200);
 
