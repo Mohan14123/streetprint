@@ -2,6 +2,7 @@
  * src/app/components/PrivacySettingsView.tsx
  * Privacy & Data settings modal — route visibility default toggle,
  * data export (real API), and account deletion (real API).
+ * Theme-aware: uses CSS custom properties.
  */
 import { useState } from 'react';
 import { motion } from 'motion/react';
@@ -76,7 +77,8 @@ export function PrivacySettingsView({ onClose, onLogout }: PrivacySettingsProps)
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center backdrop-blur-sm"
+      style={{ background: 'rgba(0, 0, 0, 0.4)' }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <motion.div
@@ -84,36 +86,36 @@ export function PrivacySettingsView({ onClose, onLogout }: PrivacySettingsProps)
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 100, opacity: 0 }}
         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className="w-full max-w-md bg-[#161B22] border border-white/10 rounded-t-3xl sm:rounded-2xl p-6 shadow-2xl"
+        className="w-full max-w-md rounded-t-3xl sm:rounded-2xl p-6 shadow-2xl"
+        style={{ background: 'var(--sp-bg-card)', border: '1px solid var(--sp-border-strong)' }}
       >
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
-              <Shield className="w-5 h-5 text-cyan-400" />
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'var(--sp-accent-glow)', border: '1px solid var(--sp-border-strong)' }}>
+              <Shield className="w-5 h-5" style={{ color: 'var(--sp-accent-text)' }} />
             </div>
-            <h2 className="text-lg font-bold text-white">Privacy & Data</h2>
+            <h2 className="text-lg font-bold" style={{ color: 'var(--sp-text-primary)' }}>Privacy & Data</h2>
           </div>
-          <button onClick={onClose} className="text-slate-500 hover:text-white transition-colors">
+          <button onClick={onClose} className="transition-colors" style={{ color: 'var(--sp-text-muted)' }}>
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <div className="space-y-4">
           {/* Route Visibility Default */}
-          <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+          <div className="rounded-xl p-4" style={{ background: 'var(--sp-bg-input)', border: '1px solid var(--sp-border)' }}>
             <div className="flex items-center justify-between">
               <div className="flex-1 mr-4">
-                <h3 className="text-sm font-medium text-white mb-1">Default Route Visibility</h3>
-                <p className="text-xs text-slate-500">
+                <h3 className="text-sm font-medium mb-1" style={{ color: 'var(--sp-text-primary)' }}>Default Route Visibility</h3>
+                <p className="text-xs" style={{ color: 'var(--sp-text-muted)' }}>
                   New routes will be {defaultPublic ? 'visible to the community' : 'private by default'}
                 </p>
               </div>
               <button
                 onClick={handleToggleDefault}
-                className={`relative w-12 h-7 rounded-full transition-colors duration-200 ${
-                  defaultPublic ? 'bg-cyan-500' : 'bg-slate-700'
-                }`}
+                className={`relative w-12 h-7 rounded-full transition-colors duration-200`}
+                style={{ background: defaultPublic ? 'var(--sp-accent)' : 'var(--sp-bg-skeleton)' }}
               >
                 <motion.div
                   layout
@@ -124,19 +126,19 @@ export function PrivacySettingsView({ onClose, onLogout }: PrivacySettingsProps)
                 <span className="sr-only">{defaultPublic ? 'Public' : 'Private'}</span>
               </button>
             </div>
-            <div className="flex items-center gap-2 mt-3 text-xs text-slate-400">
+            <div className="flex items-center gap-2 mt-3 text-xs" style={{ color: 'var(--sp-text-secondary)' }}>
               {defaultPublic ? (
-                <><Eye className="w-3.5 h-3.5 text-cyan-400" /> Routes visible in community heatmap</>
+                <><Eye className="w-3.5 h-3.5" style={{ color: 'var(--sp-accent-text)' }} /> Routes visible in community heatmap</>
               ) : (
-                <><EyeOff className="w-3.5 h-3.5 text-slate-400" /> Only you can see your routes</>
+                <><EyeOff className="w-3.5 h-3.5" style={{ color: 'var(--sp-text-muted)' }} /> Only you can see your routes</>
               )}
             </div>
           </div>
 
           {/* Export Data */}
-          <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-            <h3 className="text-sm font-medium text-white mb-1">Export Your Data</h3>
-            <p className="text-xs text-slate-500 mb-3">
+          <div className="rounded-xl p-4" style={{ background: 'var(--sp-bg-input)', border: '1px solid var(--sp-border)' }}>
+            <h3 className="text-sm font-medium mb-1" style={{ color: 'var(--sp-text-primary)' }}>Export Your Data</h3>
+            <p className="text-xs mb-3" style={{ color: 'var(--sp-text-muted)' }}>
               Download all your routes, places, and profile data as a JSON file.
             </p>
             <motion.button
@@ -144,50 +146,54 @@ export function PrivacySettingsView({ onClose, onLogout }: PrivacySettingsProps)
               whileTap={{ scale: 0.98 }}
               onClick={() => void handleExportData()}
               disabled={exporting}
-              className="w-full h-10 rounded-xl bg-white/5 border border-white/10 text-sm text-slate-300 font-medium hover:bg-white/10 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+              className="w-full h-10 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+              style={{ background: 'var(--sp-bg-input)', border: '1px solid var(--sp-border-strong)', color: 'var(--sp-text-secondary)' }}
             >
               {exporting ? (
                 <><Loader2 className="w-4 h-4 animate-spin" /> Preparing export...</>
               ) : exportDone ? (
-                <><CheckCircle className="w-4 h-4 text-emerald-400" /> Download started!</>
+                <><CheckCircle className="w-4 h-4" style={{ color: 'var(--sp-status-success-text)' }} /> Download started!</>
               ) : (
                 <><Download className="w-4 h-4" /> Export Data</>
               )}
             </motion.button>
             {exportError && (
-              <p className="text-xs text-red-400 mt-2 flex items-center gap-1">
+              <p className="text-xs mt-2 flex items-center gap-1" style={{ color: 'var(--sp-status-danger-text)' }}>
                 <AlertTriangle className="w-3 h-3" /> {exportError}
               </p>
             )}
           </div>
 
           {/* Delete Account */}
-          <div className="bg-red-500/5 border border-red-500/10 rounded-xl p-4">
-            <h3 className="text-sm font-medium text-red-400 mb-1">Delete Account</h3>
-            <p className="text-xs text-slate-500 mb-3">
+          <div className="rounded-xl p-4" style={{ background: 'var(--sp-status-danger-bg)', border: '1px solid var(--sp-status-danger-text)' }}>
+            <h3 className="text-sm font-medium mb-1" style={{ color: 'var(--sp-status-danger-text)' }}>Delete Account</h3>
+            <p className="text-xs mb-3" style={{ color: 'var(--sp-text-muted)' }}>
               Permanently delete your account and all associated data. This cannot be undone.
             </p>
             {!showDeleteConfirm ? (
               <button
                 onClick={() => setShowDeleteConfirm(true)}
-                className="w-full h-10 rounded-xl bg-red-500/10 border border-red-500/20 text-sm text-red-400 font-medium hover:bg-red-500/20 transition-colors flex items-center justify-center gap-2"
+                className="w-full h-10 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                style={{ background: 'var(--sp-status-danger-bg)', border: '1px solid var(--sp-status-danger-text)', color: 'var(--sp-status-danger-text)' }}
               >
                 <Trash2 className="w-4 h-4" /> Delete Account
               </button>
             ) : (
               <div className="space-y-2">
-                <p className="text-xs text-red-400 font-medium">Are you sure? This is permanent.</p>
+                <p className="text-xs font-medium" style={{ color: 'var(--sp-status-danger-text)' }}>Are you sure? This is permanent.</p>
                 <div className="flex gap-2">
                   <button
                     onClick={() => { setShowDeleteConfirm(false); setDeleteError(''); }}
                     disabled={deleting}
-                    className="flex-1 h-9 rounded-lg bg-white/5 border border-white/10 text-xs text-slate-400 hover:bg-white/10 transition-colors disabled:opacity-50"
+                    className="flex-1 h-9 rounded-lg text-xs transition-colors disabled:opacity-50"
+                    style={{ background: 'var(--sp-bg-input)', border: '1px solid var(--sp-border-strong)', color: 'var(--sp-text-muted)' }}
                   >
                     Cancel
                   </button>
                   <button
                     disabled={deleting}
-                    className="flex-1 h-9 rounded-lg bg-red-500/20 border border-red-500/30 text-xs text-red-400 hover:bg-red-500/30 transition-colors flex items-center justify-center gap-1 disabled:opacity-50"
+                    className="flex-1 h-9 rounded-lg text-xs transition-colors flex items-center justify-center gap-1 disabled:opacity-50"
+                    style={{ background: 'var(--sp-status-danger-bg)', border: '1px solid var(--sp-status-danger-text)', color: 'var(--sp-status-danger-text)' }}
                     onClick={() => void handleDeleteAccount()}
                   >
                     {deleting ? (
@@ -198,7 +204,7 @@ export function PrivacySettingsView({ onClose, onLogout }: PrivacySettingsProps)
                   </button>
                 </div>
                 {deleteError && (
-                  <p className="text-xs text-red-400 flex items-center gap-1">
+                  <p className="text-xs flex items-center gap-1" style={{ color: 'var(--sp-status-danger-text)' }}>
                     <AlertTriangle className="w-3 h-3" /> {deleteError}
                   </p>
                 )}
