@@ -44,6 +44,7 @@ export interface TrackingState {
   /** Running distance in meters — computed from Kalman coords, DISPLAY ONLY */
   distanceMeters: number;
   currentMotionState: MotionState;
+  currentAccuracy: number | null;
   error: string | null;
 }
 
@@ -80,7 +81,8 @@ export function useTracking() {
     sessionId: null,
     liveRoute: [],
     distanceMeters: 0,
-    currentMotionState: 'walking',
+    currentMotionState: 'stationary',
+    currentAccuracy: null,
     error: null,
   });
 
@@ -198,17 +200,18 @@ export function useTracking() {
       const smoothedCoord: [number, number] = [smoothed.lng, smoothed.lat];
       lastSmoothedCoordRef.current = smoothedCoord;
 
-      // Update live route display (Kalman output — DISPLAY ONLY, DO NOT QUEUE)
-      setState((s) => {
-        const prevSmoothed = s.liveRoute[s.liveRoute.length - 1];
-        const addedDist = prevSmoothed
-          ? haversineDistance(prevSmoothed, smoothedCoord)
-          : 0;
+      setState((prev) => {
+        const distDelta =
+          prev.liveRoute.length > 0
+            ? haversineDistance([prev.liveRoute[prev.liveRoute.length - 1][0], prev.liveRoute[prev.liveRoute.length - 1][1]], [smoothedCoord[0], smoothedCoord[1]])
+            : 0;
+
         return {
-          ...s,
-          liveRoute: [...s.liveRoute, smoothedCoord], // DISPLAY ONLY — DO NOT QUEUE
-          distanceMeters: s.distanceMeters + addedDist, // DISPLAY ONLY — DO NOT QUEUE
+          ...prev,
+          liveRoute: [...prev.liveRoute, smoothedCoord],
+          distanceMeters: prev.distanceMeters + distDelta,
           currentMotionState: newMotionState,
+          currentAccuracy: accuracy,
         };
       });
     };
@@ -260,10 +263,11 @@ export function useTracking() {
       ...s,
       isTracking: true,
       routeId,
-      sessionId,
+      sessionId: null,
       liveRoute: [],
       distanceMeters: 0,
-      currentMotionState: 'walking',
+      currentMotionState: 'stationary',
+      currentAccuracy: null,
       error: null,
     }));
 
