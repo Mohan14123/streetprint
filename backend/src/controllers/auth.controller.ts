@@ -45,6 +45,19 @@ const LogoutSchema = z.object({
   refreshToken: z.string().min(1, 'refreshToken is required'),
 });
 
+const ForgotPasswordSchema = z.object({
+  email: z.string().email('Invalid email format'),
+});
+
+const ResetPasswordSchema = z.object({
+  token: z.string().min(1, 'Reset token is required'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+});
+
+const VerifyEmailSchema = z.object({
+  token: z.string().min(1, 'Verification token is required'),
+});
+
 // ────────────────────────────────────────────────────────────────
 // POST /auth/register
 // ────────────────────────────────────────────────────────────────
@@ -174,5 +187,94 @@ export const logout = asyncHandler(
 
     await authService.revokeRefreshToken(parse.data.refreshToken);
     sendSuccess(res, { message: 'Logged out successfully' });
+  },
+);
+
+// ────────────────────────────────────────────────────────────────
+// GET /auth/verify-email (B7)
+// ────────────────────────────────────────────────────────────────
+
+export const verifyEmail = asyncHandler(
+  async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
+    const parse = VerifyEmailSchema.safeParse(req.query);
+    if (!parse.success) {
+      sendBadRequest(res, 'Verification token is required', parse.error.flatten());
+      return;
+    }
+
+    try {
+      const result = await authService.verifyEmail(parse.data.token);
+      sendSuccess(res, result);
+    } catch (err) {
+      const e = err as Error & { code?: string };
+      if (e.code === 'AUTH_TOKEN_INVALID') {
+        sendError(res, 400, ErrorCode.AUTH_TOKEN_INVALID, e.message);
+      } else {
+        throw err;
+      }
+    }
+  },
+);
+
+// ────────────────────────────────────────────────────────────────
+// POST /auth/resend-verification (B7)
+// ────────────────────────────────────────────────────────────────
+
+export const resendVerification = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response, _next: NextFunction): Promise<void> => {
+    try {
+      const result = await authService.resendVerification(req.user.userId);
+      sendSuccess(res, result);
+    } catch (err) {
+      const e = err as Error & { code?: string };
+      if (e.code === 'AUTH_USER_NOT_FOUND') {
+        sendUnauthorized(res, e.code, e.message);
+      } else {
+        throw err;
+      }
+    }
+  },
+);
+
+// ────────────────────────────────────────────────────────────────
+// POST /auth/forgot-password (B8)
+// ────────────────────────────────────────────────────────────────
+
+export const forgotPassword = asyncHandler(
+  async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
+    const parse = ForgotPasswordSchema.safeParse(req.body);
+    if (!parse.success) {
+      sendBadRequest(res, 'Invalid request body', parse.error.flatten());
+      return;
+    }
+
+    const result = await authService.forgotPassword(parse.data.email);
+    sendSuccess(res, result);
+  },
+);
+
+// ────────────────────────────────────────────────────────────────
+// POST /auth/reset-password (B8)
+// ────────────────────────────────────────────────────────────────
+
+export const resetPassword = asyncHandler(
+  async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
+    const parse = ResetPasswordSchema.safeParse(req.body);
+    if (!parse.success) {
+      sendBadRequest(res, 'Invalid request body', parse.error.flatten());
+      return;
+    }
+
+    try {
+      const result = await authService.resetPassword(parse.data.token, parse.data.password);
+      sendSuccess(res, result);
+    } catch (err) {
+      const e = err as Error & { code?: string };
+      if (e.code === 'AUTH_TOKEN_INVALID') {
+        sendError(res, 400, ErrorCode.AUTH_TOKEN_INVALID, e.message);
+      } else {
+        throw err;
+      }
+    }
   },
 );
