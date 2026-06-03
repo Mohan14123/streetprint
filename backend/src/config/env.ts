@@ -39,6 +39,15 @@ const envSchema = z.object({
   // Bull queue
   BULL_CONCURRENCY: z.coerce.number().int().positive().default(5),
 
+  // Email (optional — falls back to console logging in dev)
+  RESEND_API_KEY: z.string().optional(),
+  SMTP_FROM: z.string().email().default('noreply@streetprint.app'),
+  EMAIL_VERIFICATION_EXPIRY_HOURS: z.coerce.number().int().positive().default(24),
+  PASSWORD_RESET_EXPIRY_MINUTES: z.coerce.number().int().positive().default(60),
+
+  // App URL (for email links)
+  APP_URL: z.string().url().default('http://localhost:5173'),
+
   // MongoDB connection timeouts
   MONGODB_SERVER_SELECTION_TIMEOUT_MS: z.coerce.number().int().positive().default(5000),
   MONGODB_SOCKET_TIMEOUT_MS: z.coerce.number().int().positive().default(45000),
