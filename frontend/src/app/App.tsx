@@ -6,7 +6,7 @@
  *  - Auth gating (login/register vs authenticated tabs)
  *  - SSE connection after login (§6 in yet_to_finish)
  *  - Tab navigation (map / routes / discover / profile)
- *  - Responsive layout: desktop sidebar + mobile bottom bar
+ *  - Responsive layout: bottom tab bar on all sizes
  *  - Offline-first sync wiring
  *  - Service worker registration
  */
@@ -95,12 +95,12 @@ export default function App() {
   // ── Loading screen while checking auth ─────────────────────────────────────
   if (isLoading) {
     return (
-      <div className="w-full h-[100dvh] bg-[#0D1117] flex items-center justify-center">
+      <div className="w-full h-[100dvh] flex items-center justify-center" style={{ background: 'var(--sp-bg-primary)' }}>
         <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-[0_0_30px_rgba(34,211,238,0.3)] animate-pulse">
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center shadow-lg animate-pulse" style={{ background: 'linear-gradient(135deg, var(--sp-gradient-start), var(--sp-gradient-end))' }}>
             <Map className="w-6 h-6 text-white" />
           </div>
-          <p className="text-sm text-slate-500">Loading...</p>
+          <p className="text-sm" style={{ color: 'var(--sp-text-muted)' }}>Loading...</p>
         </div>
       </div>
     );
@@ -118,7 +118,7 @@ export default function App() {
   void handleLogout; // acknowledge — used indirectly
 
   return (
-    <div className="w-full h-[100dvh] bg-[#0D1117] flex flex-col">
+    <div className="w-full h-[100dvh] flex flex-col" style={{ background: 'var(--sp-bg-primary)' }}>
       {/* ── Main Content Area ─────────────────────────────────────────── */}
       <div className="relative flex-1 h-full overflow-hidden">
         {activeTab === 'map' && <MapView />}
@@ -128,7 +128,13 @@ export default function App() {
       </div>
 
       {/* ── Bottom Tab Bar (all screen sizes) ─────────────────────────── */}
-      <div className="fixed bottom-0 inset-x-0 h-20 bg-[#0D1117]/80 backdrop-blur-2xl border-t border-white/5 flex items-center justify-around px-2 z-40 pb-safe">
+      <div
+        className="fixed bottom-0 inset-x-0 h-20 backdrop-blur-2xl flex items-center justify-around px-2 z-40 pb-safe"
+        style={{
+          background: 'var(--sp-tab-bg)',
+          borderTop: '1px solid var(--sp-tab-border)',
+        }}
+      >
         {TABS.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -136,14 +142,19 @@ export default function App() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors duration-300 ${
-                isActive ? 'text-cyan-400' : 'text-slate-500 hover:text-slate-300'
-              }`}
+              className="flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors duration-300"
+              style={{ color: isActive ? 'var(--sp-tab-active)' : 'var(--sp-tab-inactive)' }}
             >
               <div className={`relative flex items-center justify-center transition-transform duration-300 ${isActive ? '-translate-y-1' : ''}`}>
                 <Icon size={24} />
                 {isActive && (
-                  <div className="absolute -bottom-2 w-1 h-1 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
+                  <div
+                    className="absolute -bottom-2 w-1 h-1 rounded-full"
+                    style={{
+                      background: 'var(--sp-tab-active)',
+                      boxShadow: `0 0 8px var(--sp-accent-glow)`,
+                    }}
+                  />
                 )}
               </div>
               <span className={`text-[10px] font-medium transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-0'}`}>
