@@ -2,6 +2,7 @@
  * src/app/components/ErrorBoundary.tsx
  * Global error boundary — catches component crashes and shows a fallback UI
  * instead of white-screening the entire app.
+ * Theme-aware: uses CSS custom properties.
  */
 import { Component, type ReactNode, type ErrorInfo } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
@@ -37,23 +38,52 @@ export class ErrorBoundary extends Component<Props, State> {
   render(): ReactNode {
     if (this.state.hasError) {
       return (
-        <div className="flex items-center justify-center min-h-screen bg-black">
-          <div className="relative w-full h-[100dvh] sm:h-[844px] sm:w-[390px] sm:rounded-[3rem] overflow-hidden bg-[#0D1117] sm:border-[8px] border-[#1f2937] shadow-2xl flex flex-col items-center justify-center px-8 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center mb-4">
-              <AlertTriangle className="w-8 h-8 text-red-400" />
+        <div
+          className="flex items-center justify-center min-h-screen"
+          style={{ background: 'var(--sp-bg-primary, #0D1117)' }}
+        >
+          <div className="flex flex-col items-center justify-center px-8 text-center max-w-sm">
+            <div
+              className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
+              style={{ background: 'var(--sp-status-danger-bg, rgba(239, 68, 68, 0.1))' }}
+            >
+              <AlertTriangle
+                className="w-8 h-8"
+                style={{ color: 'var(--sp-status-danger-text, #ef4444)' }}
+              />
             </div>
-            <h1 className="text-xl font-bold text-white mb-2">Something went wrong</h1>
-            <p className="text-sm text-slate-500 mb-6 max-w-[280px]">
+            <h1
+              className="text-xl font-bold mb-2"
+              style={{ color: 'var(--sp-text-primary, #e2e8f0)' }}
+            >
+              Something went wrong
+            </h1>
+            <p
+              className="text-sm mb-6 max-w-[280px]"
+              style={{ color: 'var(--sp-text-muted, #64748b)' }}
+            >
               The app encountered an unexpected error. Try reloading.
             </p>
             {this.state.error && (
-              <pre className="text-xs text-red-400/60 bg-red-500/5 border border-red-500/10 rounded-xl p-3 mb-6 max-w-full overflow-x-auto text-left">
+              <pre
+                className="text-xs rounded-xl p-3 mb-6 max-w-full overflow-x-auto text-left"
+                style={{
+                  color: 'var(--sp-status-danger-text, #ef4444)',
+                  background: 'var(--sp-status-danger-bg, rgba(239, 68, 68, 0.05))',
+                  border: '1px solid var(--sp-border, rgba(255,255,255,0.1))',
+                }}
+              >
                 {this.state.error.message}
               </pre>
             )}
             <button
               onClick={this.handleReload}
-              className="h-10 px-6 bg-white/10 border border-white/10 rounded-xl text-sm text-white flex items-center gap-2 hover:bg-white/15 transition-colors"
+              className="h-10 px-6 rounded-xl text-sm flex items-center gap-2 transition-colors"
+              style={{
+                background: 'var(--sp-bg-input, rgba(255,255,255,0.1))',
+                border: '1px solid var(--sp-border-strong, rgba(255,255,255,0.1))',
+                color: 'var(--sp-text-primary, #e2e8f0)',
+              }}
             >
               <RefreshCw className="w-4 h-4" />
               Reload App
