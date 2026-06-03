@@ -4,6 +4,79 @@
   --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 }
 
+/* ── Theme CSS Custom Properties ──────────────────────────────────────────── */
+
+:root {
+  /* Light theme (default when class="light" or no class) */
+  --sp-bg-primary: #f8fafc;
+  --sp-bg-secondary: #f1f5f9;
+  --sp-bg-card: #ffffff;
+  --sp-bg-elevated: #ffffff;
+  --sp-bg-overlay: rgba(241, 245, 249, 0.95);
+  --sp-bg-input: rgba(0, 0, 0, 0.03);
+  --sp-bg-skeleton: rgba(0, 0, 0, 0.06);
+  --sp-text-primary: #0f172a;
+  --sp-text-secondary: #475569;
+  --sp-text-muted: #94a3b8;
+  --sp-text-faint: #cbd5e1;
+  --sp-border: rgba(0, 0, 0, 0.08);
+  --sp-border-strong: rgba(0, 0, 0, 0.12);
+  --sp-accent: #0891b2;
+  --sp-accent-glow: rgba(8, 145, 178, 0.15);
+  --sp-accent-text: #0891b2;
+  --sp-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --sp-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --sp-shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.1);
+  --sp-gradient-start: #0891b2;
+  --sp-gradient-end: #2563eb;
+  --sp-map-bg: #e8e8e8;
+  --sp-tab-bg: rgba(255, 255, 255, 0.85);
+  --sp-tab-border: rgba(0, 0, 0, 0.06);
+  --sp-tab-active: #0891b2;
+  --sp-tab-inactive: #94a3b8;
+  --sp-status-success-bg: rgba(22, 163, 74, 0.08);
+  --sp-status-success-text: #15803d;
+  --sp-status-danger-bg: rgba(239, 68, 68, 0.08);
+  --sp-status-danger-text: #dc2626;
+  --sp-status-warning-bg: rgba(245, 158, 11, 0.08);
+  --sp-status-warning-text: #d97706;
+}
+
+.dark {
+  --sp-bg-primary: #0D1117;
+  --sp-bg-secondary: #161B22;
+  --sp-bg-card: #161B22;
+  --sp-bg-elevated: #1C2128;
+  --sp-bg-overlay: rgba(22, 27, 34, 0.95);
+  --sp-bg-input: rgba(255, 255, 255, 0.05);
+  --sp-bg-skeleton: rgba(255, 255, 255, 0.05);
+  --sp-text-primary: #e2e8f0;
+  --sp-text-secondary: #94a3b8;
+  --sp-text-muted: #64748b;
+  --sp-text-faint: #475569;
+  --sp-border: rgba(255, 255, 255, 0.05);
+  --sp-border-strong: rgba(255, 255, 255, 0.1);
+  --sp-accent: #22d3ee;
+  --sp-accent-glow: rgba(34, 211, 238, 0.15);
+  --sp-accent-text: #22d3ee;
+  --sp-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --sp-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --sp-shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.5);
+  --sp-gradient-start: #06b6d4;
+  --sp-gradient-end: #2563eb;
+  --sp-map-bg: #0D1117;
+  --sp-tab-bg: rgba(13, 17, 23, 0.8);
+  --sp-tab-border: rgba(255, 255, 255, 0.05);
+  --sp-tab-active: #22d3ee;
+  --sp-tab-inactive: #64748b;
+  --sp-status-success-bg: rgba(34, 197, 94, 0.15);
+  --sp-status-success-text: #22c55e;
+  --sp-status-danger-bg: rgba(239, 68, 68, 0.1);
+  --sp-status-danger-text: #ef4444;
+  --sp-status-warning-bg: rgba(245, 158, 11, 0.1);
+  --sp-status-warning-text: #f59e0b;
+}
+
 @layer utilities {
   .custom-scrollbar::-webkit-scrollbar {
     width: 4px;
@@ -13,11 +86,11 @@
     background: transparent;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--sp-border-strong);
     border-radius: 4px;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: var(--sp-text-muted);
   }
   .pb-safe {
     padding-bottom: env(safe-area-inset-bottom);
@@ -25,18 +98,18 @@
 }
 
 /* ── Leaflet Dark Theme Overrides ─────────────────────────────────────────── */
-.leaflet-control-attribution {
+.dark .leaflet-control-attribution {
   background: rgba(13, 17, 23, 0.8) !important;
   color: rgba(148, 163, 184, 0.6) !important;
   font-size: 9px !important;
   backdrop-filter: blur(8px);
 }
 
-.leaflet-control-attribution a {
+.dark .leaflet-control-attribution a {
   color: rgba(34, 211, 238, 0.6) !important;
 }
 
-.leaflet-bar {
+.dark .leaflet-bar {
   background: rgba(13, 17, 23, 0.9) !important;
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
   backdrop-filter: blur(12px);
@@ -44,15 +117,51 @@
   overflow: hidden;
 }
 
-.leaflet-bar a {
+.dark .leaflet-bar a {
   background: transparent !important;
   color: rgba(226, 232, 240, 0.8) !important;
   border-bottom-color: rgba(255, 255, 255, 0.05) !important;
 }
 
-.leaflet-bar a:hover {
+.dark .leaflet-bar a:hover {
   background: rgba(255, 255, 255, 0.1) !important;
   color: #22d3ee !important;
+}
+
+/* ── Leaflet Light Theme Overrides ────────────────────────────────────────── */
+:root:not(.dark) .leaflet-control-attribution,
+.light .leaflet-control-attribution {
+  background: rgba(255, 255, 255, 0.85) !important;
+  color: rgba(71, 85, 105, 0.8) !important;
+  font-size: 9px !important;
+  backdrop-filter: blur(8px);
+}
+
+:root:not(.dark) .leaflet-control-attribution a,
+.light .leaflet-control-attribution a {
+  color: #0891b2 !important;
+}
+
+:root:not(.dark) .leaflet-bar,
+.light .leaflet-bar {
+  background: rgba(255, 255, 255, 0.92) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  backdrop-filter: blur(12px);
+  border-radius: 12px !important;
+  overflow: hidden;
+}
+
+:root:not(.dark) .leaflet-bar a,
+.light .leaflet-bar a {
+  background: transparent !important;
+  color: #475569 !important;
+  border-bottom-color: rgba(0, 0, 0, 0.06) !important;
+}
+
+:root:not(.dark) .leaflet-bar a:hover,
+.light .leaflet-bar a:hover {
+  background: rgba(0, 0, 0, 0.04) !important;
+  color: #0891b2 !important;
 }
 
 /* Remove default pulsing icon background */
@@ -67,8 +176,14 @@
   border: none !important;
 }
 
+/* Route arrow icon cleanup */
+.route-arrow-icon {
+  background: none !important;
+  border: none !important;
+}
+
 /* ── Leaflet Popup Dark Theme (POI Details) ───────────────────────────── */
-.leaflet-popup-content-wrapper {
+.dark .leaflet-popup-content-wrapper {
   background: rgba(22, 27, 34, 0.95) !important;
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
   border-radius: 16px !important;
@@ -77,24 +192,61 @@
   color: #e2e8f0 !important;
 }
 
-.leaflet-popup-content {
+.dark .leaflet-popup-content {
   margin: 12px 16px !important;
   font-size: 13px !important;
   line-height: 1.5 !important;
 }
 
-.leaflet-popup-tip {
+.dark .leaflet-popup-tip {
   background: rgba(22, 27, 34, 0.95) !important;
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
   box-shadow: none !important;
 }
 
-.leaflet-popup-close-button {
+.dark .leaflet-popup-close-button {
   color: rgba(148, 163, 184, 0.6) !important;
   font-size: 18px !important;
   padding: 4px 8px !important;
 }
 
-.leaflet-popup-close-button:hover {
+.dark .leaflet-popup-close-button:hover {
   color: #22d3ee !important;
+}
+
+/* ── Leaflet Popup Light Theme ───────────────────────────────────────── */
+:root:not(.dark) .leaflet-popup-content-wrapper,
+.light .leaflet-popup-content-wrapper {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12) !important;
+  backdrop-filter: blur(12px);
+  color: #1e293b !important;
+}
+
+:root:not(.dark) .leaflet-popup-content,
+.light .leaflet-popup-content {
+  margin: 12px 16px !important;
+  font-size: 13px !important;
+  line-height: 1.5 !important;
+}
+
+:root:not(.dark) .leaflet-popup-tip,
+.light .leaflet-popup-tip {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: none !important;
+}
+
+:root:not(.dark) .leaflet-popup-close-button,
+.light .leaflet-popup-close-button {
+  color: rgba(100, 116, 139, 0.6) !important;
+  font-size: 18px !important;
+  padding: 4px 8px !important;
+}
+
+:root:not(.dark) .leaflet-popup-close-button:hover,
+.light .leaflet-popup-close-button:hover {
+  color: #0891b2 !important;
 }
