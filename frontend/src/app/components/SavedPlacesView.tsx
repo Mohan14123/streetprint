@@ -172,11 +172,11 @@ export function SavedPlacesView() {
   };
 
   return (
-    <div className="w-full h-full bg-[#0D1117] flex flex-col font-sans text-slate-200 pb-20 overflow-hidden">
+    <div className="w-full h-full flex flex-col font-sans pb-20 overflow-hidden" style={{ background: 'var(--sp-bg-primary)', color: 'var(--sp-text-primary)' }}>
       {/* Header */}
-      <div className="pt-12 pb-4 px-6 bg-[#0D1117] border-b border-white/5 shrink-0 z-10">
+      <div className="pt-12 pb-4 px-6 border-b shrink-0 z-10" style={{ background: 'var(--sp-bg-primary)', borderColor: 'var(--sp-border)' }}>
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-bold text-white">Saved Places</h1>
+          <h1 className="text-2xl font-bold" style={{ color: 'var(--sp-text-primary)' }}>Saved Places</h1>
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -188,22 +188,22 @@ export function SavedPlacesView() {
         </div>
 
         <div className="flex gap-3">
-          <div className="flex-1 h-10 bg-white/5 border border-white/10 rounded-xl flex items-center px-3">
-            <Search className="w-4 h-4 text-slate-400" />
+          <div className="flex-1 h-10 bg-[var(--sp-bg-input)] border border-[var(--sp-border-strong)] rounded-xl flex items-center px-3">
+            <Search className="w-4 h-4 text-[var(--sp-text-secondary)]" />
             <input 
               type="text" 
               placeholder="Search saved..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-transparent border-none outline-none text-sm text-white ml-2 w-full placeholder:text-slate-500"
+              className="bg-transparent border-none outline-none text-sm text-[var(--sp-text-primary)] ml-2 w-full placeholder:text-[var(--sp-text-muted)]"
             />
             {searchQuery && (
-              <button onClick={() => setSearchQuery('')} className="text-slate-500 hover:text-white">
+              <button onClick={() => setSearchQuery('')} className="text-[var(--sp-text-muted)] hover:text-[var(--sp-text-primary)]">
                 <X className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
-          <button className="h-10 w-10 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center text-slate-400 hover:text-white transition-colors">
+          <button className="h-10 w-10 bg-[var(--sp-bg-input)] border border-[var(--sp-border-strong)] rounded-xl flex items-center justify-center text-[var(--sp-text-secondary)] hover:text-[var(--sp-text-primary)] transition-colors">
             <Filter className="w-4 h-4" />
           </button>
         </div>
@@ -217,7 +217,7 @@ export function SavedPlacesView() {
               className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-medium border transition-colors ${
                 activeCategory === cat 
                   ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30' 
-                  : 'bg-transparent text-slate-400 border-white/10 hover:bg-white/5 hover:text-white'
+                  : 'bg-transparent text-[var(--sp-text-secondary)] border-[var(--sp-border-strong)] hover:bg-[var(--sp-bg-input)] hover:text-[var(--sp-text-primary)]'
               }`}
             >
               {cat}
@@ -232,7 +232,7 @@ export function SavedPlacesView() {
         {loading && (
           <div className="flex flex-col items-center justify-center py-16 gap-3">
             <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
-            <p className="text-sm text-slate-500">Loading places...</p>
+            <p className="text-sm text-[var(--sp-text-muted)]">Loading places...</p>
           </div>
         )}
 
@@ -255,14 +255,14 @@ export function SavedPlacesView() {
         {/* Empty state */}
         {!loading && !error && filteredPlaces.length === 0 && (
           <div className="flex flex-col items-center justify-center py-16 gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
-              <MapPin className="w-8 h-8 text-slate-600" />
+            <div className="w-16 h-16 rounded-2xl bg-[var(--sp-bg-input)] border border-[var(--sp-border-strong)] flex items-center justify-center">
+              <MapPin className="w-8 h-8 text-[var(--sp-text-faint)]" />
             </div>
             <div className="text-center">
-              <p className="text-white font-medium mb-1">
+              <p className="text-[var(--sp-text-primary)] font-medium mb-1">
                 {searchQuery ? 'No matching places' : 'No places saved yet'}
               </p>
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-[var(--sp-text-muted)]">
                 {searchQuery
                   ? 'Try a different search term'
                   : 'Tap the + button to bookmark places you want to visit'}
@@ -273,7 +273,7 @@ export function SavedPlacesView() {
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.97 }}
                 onClick={() => setShowAddForm(true)}
-                className="mt-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-sm font-medium shadow-[0_0_20px_rgba(34,211,238,0.3)]"
+                className="mt-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 text-[var(--sp-text-primary)] text-sm font-medium shadow-[0_0_20px_rgba(34,211,238,0.3)]"
               >
                 Save your first place
               </motion.button>
@@ -289,18 +289,18 @@ export function SavedPlacesView() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: idx * 0.04 }}
             key={place._id} 
-            className="bg-[#161B22] border border-white/5 rounded-xl p-2.5 shadow-lg group"
+            className="bg-[var(--sp-bg-card)] border border-[var(--sp-border)] rounded-xl p-2.5 shadow-lg group"
           >
             <div className="flex items-start gap-3">
               {/* Icon */}
-              <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center shrink-0 mt-0.5">
+              <div className="w-8 h-8 rounded-lg bg-[var(--sp-accent-glow)] border border-[var(--sp-accent-glow)] flex items-center justify-center shrink-0 mt-0.5">
                 <MapPin className="w-4 h-4 text-cyan-400" />
               </div>
 
               {/* Info */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-0.5">
-                  <h3 className="text-sm font-semibold text-white truncate">{place.label}</h3>
+                  <h3 className="text-sm font-semibold text-[var(--sp-text-primary)] truncate">{place.label}</h3>
                   <div className="flex items-center gap-1.5 shrink-0 ml-2">
                     {!place.visited && (
                       <button
@@ -319,7 +319,7 @@ export function SavedPlacesView() {
                     <div className="relative">
                       <button
                         onClick={(e) => { e.stopPropagation(); setMenuOpenId(menuOpenId === place._id ? null : place._id); }}
-                        className="text-slate-500 hover:text-white transition-colors p-0.5"
+                        className="text-[var(--sp-text-muted)] hover:text-[var(--sp-text-primary)] transition-colors p-0.5"
                       >
                         <MoreVertical className="w-4 h-4" />
                       </button>
@@ -332,13 +332,13 @@ export function SavedPlacesView() {
                             initial={{ opacity: 0, scale: 0.9, y: -4 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.9 }}
-                            className="absolute right-0 top-7 z-50 w-44 bg-[#1C2128] border border-white/10 rounded-xl shadow-2xl overflow-hidden"
+                            className="absolute right-0 top-7 z-50 w-44 bg-[var(--sp-bg-elevated)] border border-[var(--sp-border-strong)] rounded-xl shadow-2xl overflow-hidden"
                           >
                             <button
                               onClick={() => { setEditingPlace(place); setMenuOpenId(null); }}
-                              className="w-full flex items-center gap-3 px-3 py-2.5 text-xs text-slate-300 hover:bg-white/5 transition-colors"
+                              className="w-full flex items-center gap-3 px-3 py-2.5 text-xs text-[var(--sp-text-primary)] hover:bg-[var(--sp-bg-input)] transition-colors"
                             >
-                              <Pencil className="w-3.5 h-3.5 text-slate-400" /> Edit
+                              <Pencil className="w-3.5 h-3.5 text-[var(--sp-text-secondary)]" /> Edit
                             </button>
                             <button
                               onClick={() => { void handleDeletePlace(place._id); setMenuOpenId(null); }}
@@ -347,18 +347,18 @@ export function SavedPlacesView() {
                             >
                               {deletingId === place._id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />} Delete
                             </button>
-                            <div className="h-px bg-white/5" />
+                            <div className="h-px bg-[var(--sp-bg-input)]" />
                             <button
                               onClick={() => void handleShare(place)}
-                              className="w-full flex items-center gap-3 px-3 py-2.5 text-xs text-slate-300 hover:bg-white/5 transition-colors"
+                              className="w-full flex items-center gap-3 px-3 py-2.5 text-xs text-[var(--sp-text-primary)] hover:bg-[var(--sp-bg-input)] transition-colors"
                             >
-                              <Share2 className="w-3.5 h-3.5 text-slate-400" /> Share
+                              <Share2 className="w-3.5 h-3.5 text-[var(--sp-text-secondary)]" /> Share
                             </button>
                             <button
                               onClick={() => handleOpenInMaps(place)}
-                              className="w-full flex items-center gap-3 px-3 py-2.5 text-xs text-slate-300 hover:bg-white/5 transition-colors"
+                              className="w-full flex items-center gap-3 px-3 py-2.5 text-xs text-[var(--sp-text-primary)] hover:bg-[var(--sp-bg-input)] transition-colors"
                             >
-                              <ExternalLink className="w-3.5 h-3.5 text-slate-400" /> Open in Maps
+                              <ExternalLink className="w-3.5 h-3.5 text-[var(--sp-text-secondary)]" /> Open in Maps
                             </button>
                           </motion.div>
                         </>
@@ -368,11 +368,11 @@ export function SavedPlacesView() {
                 </div>
 
                 <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
-                  <span className="text-[10px] text-slate-600 font-mono">
+                  <span className="text-[10px] text-[var(--sp-text-faint)] font-mono">
                     {place.location.coordinates[1].toFixed(4)}, {place.location.coordinates[0].toFixed(4)}
                   </span>
-                  <span className="text-[10px] text-slate-600">•</span>
-                  <span className="text-[10px] text-slate-500">{formatDate(place.createdAt)}</span>
+                  <span className="text-[10px] text-[var(--sp-text-faint)]">•</span>
+                  <span className="text-[10px] text-[var(--sp-text-muted)]">{formatDate(place.createdAt)}</span>
                   <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-medium ${
                     place.visited
                       ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
@@ -484,7 +484,7 @@ function AddPlaceModal({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-[var(--sp-bg-overlay)] backdrop-blur-sm"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <motion.div
@@ -492,58 +492,58 @@ function AddPlaceModal({
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 100, opacity: 0 }}
         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className="w-full max-w-md bg-[#161B22] border border-white/10 rounded-t-3xl sm:rounded-2xl p-6 shadow-2xl"
+        className="w-full max-w-md bg-[var(--sp-bg-card)] border border-[var(--sp-border-strong)] rounded-t-3xl sm:rounded-2xl p-6 shadow-2xl"
       >
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-bold text-white">{title}</h2>
-          <button onClick={onClose} className="text-slate-500 hover:text-white transition-colors">
+          <h2 className="text-lg font-bold text-[var(--sp-text-primary)]">{title}</h2>
+          <button onClick={onClose} className="text-[var(--sp-text-muted)] hover:text-[var(--sp-text-primary)] transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-slate-400 mb-1.5">Label *</label>
+            <label className="block text-xs font-medium text-[var(--sp-text-secondary)] mb-1.5">Label *</label>
             <input
               type="text"
               value={label}
               onChange={(e) => setLabel(e.target.value)}
               placeholder="e.g. Favorite Coffee Shop"
-              className="w-full h-10 px-3 bg-white/5 border border-white/10 rounded-xl text-sm text-white placeholder:text-slate-500 outline-none focus:border-cyan-500/50 transition-colors"
+              className="w-full h-10 px-3 bg-[var(--sp-bg-input)] border border-[var(--sp-border-strong)] rounded-xl text-sm text-[var(--sp-text-primary)] placeholder:text-[var(--sp-text-muted)] outline-none focus:border-cyan-500/50 transition-colors"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1.5">Latitude *</label>
+              <label className="block text-xs font-medium text-[var(--sp-text-secondary)] mb-1.5">Latitude *</label>
               <input
                 type="text"
                 value={lat}
                 onChange={(e) => setLat(e.target.value)}
                 placeholder="12.9716"
-                className="w-full h-10 px-3 bg-white/5 border border-white/10 rounded-xl text-sm text-white placeholder:text-slate-500 outline-none focus:border-cyan-500/50 transition-colors font-mono"
+                className="w-full h-10 px-3 bg-[var(--sp-bg-input)] border border-[var(--sp-border-strong)] rounded-xl text-sm text-[var(--sp-text-primary)] placeholder:text-[var(--sp-text-muted)] outline-none focus:border-cyan-500/50 transition-colors font-mono"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1.5">Longitude *</label>
+              <label className="block text-xs font-medium text-[var(--sp-text-secondary)] mb-1.5">Longitude *</label>
               <input
                 type="text"
                 value={lng}
                 onChange={(e) => setLng(e.target.value)}
                 placeholder="77.5946"
-                className="w-full h-10 px-3 bg-white/5 border border-white/10 rounded-xl text-sm text-white placeholder:text-slate-500 outline-none focus:border-cyan-500/50 transition-colors font-mono"
+                className="w-full h-10 px-3 bg-[var(--sp-bg-input)] border border-[var(--sp-border-strong)] rounded-xl text-sm text-[var(--sp-text-primary)] placeholder:text-[var(--sp-text-muted)] outline-none focus:border-cyan-500/50 transition-colors font-mono"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-400 mb-1.5">Notes</label>
+            <label className="block text-xs font-medium text-[var(--sp-text-secondary)] mb-1.5">Notes</label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Optional notes..."
               rows={2}
-              className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-sm text-white placeholder:text-slate-500 outline-none focus:border-cyan-500/50 transition-colors resize-none"
+              className="w-full px-3 py-2 bg-[var(--sp-bg-input)] border border-[var(--sp-border-strong)] rounded-xl text-sm text-[var(--sp-text-primary)] placeholder:text-[var(--sp-text-muted)] outline-none focus:border-cyan-500/50 transition-colors resize-none"
             />
           </div>
 
@@ -556,7 +556,7 @@ function AddPlaceModal({
             whileTap={{ scale: 0.98 }}
             type="submit"
             disabled={saving}
-            className="w-full h-11 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-medium text-sm shadow-[0_0_20px_rgba(34,211,238,0.2)] disabled:opacity-50 flex items-center justify-center gap-2"
+            className="w-full h-11 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-[var(--sp-text-primary)] font-medium text-sm shadow-[0_0_20px_rgba(34,211,238,0.2)] disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {saving ? (
               <>
