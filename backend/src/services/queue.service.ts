@@ -12,6 +12,23 @@ import Bull from 'bull';
 import { env } from '../config/env';
 import logger from '../config/logger';
 import type { RouteWriterJobData } from '../types';
+import { Gauge, Counter } from 'prom-client';
+
+export const queueDepth = new Gauge({
+  name: 'queue_depth',
+  help: 'Number of jobs currently in the queue',
+  labelNames: ['status']
+});
+
+export const queueJobsCompleted = new Counter({
+  name: 'queue_jobs_completed_total',
+  help: 'Total number of jobs completed successfully by the queue'
+});
+
+export const queueJobsFailed = new Counter({
+  name: 'queue_jobs_failed_total',
+  help: 'Total number of jobs permanently failed in the queue'
+});
 
 // ────────────────────────────────────────────────────────────────
 // Queue instance (singleton)
@@ -36,8 +53,20 @@ export const routeWriterQueue = new Bull<RouteWriterJobData>('routeWriter', {
 });
 
 // ────────────────────────────────────────────────────────────────
-// Queue event logging
+// Queue event logging & Metrics tracking
 // ────────────────────────────────────────────────────────────────
+
+// Poll queue depth every 5 seconds
+setInterval(async () => {
+  try {
+    const counts = await routeWriterQueue.getJobCounts();
+    queueDepth.set({ status: 'active' }, counts.active);
+    queueDepth.set({ status: 'waiting' }, counts.waiting);
+    queueDepth.set({ status: 'delayed' }, counts.delayed);
+  } catch (err) {
+    // Ignore background polling errors
+  }
+}, 5000);
 
 routeWriterQueue.on('error', (err: Error) => {
   logger.error('[queue] routeWriterQueue error', { message: err.message, stack: err.stack });
@@ -46,6 +75,7 @@ routeWriterQueue.on('error', (err: Error) => {
 routeWriterQueue.on('failed', (job, err: Error) => {
   // Only log at error level after ALL retries are exhausted
   if (job.attemptsMade >= (job.opts.attempts ?? 3)) {
+    queueJobsFailed.inc();
     logger.error('[queue] Job permanently failed after all retries', {
       jobId: job.id,
       routeId: job.data.routeId,
@@ -64,6 +94,7 @@ routeWriterQueue.on('failed', (job, err: Error) => {
 });
 
 routeWriterQueue.on('completed', (job) => {
+  queueJobsCompleted.inc();
   logger.debug('[queue] Job completed', {
     jobId: job.id,
     routeId: job.data.routeId,
