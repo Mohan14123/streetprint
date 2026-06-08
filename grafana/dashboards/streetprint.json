@@ -1,0 +1,66 @@
+{
+  "title": "StreetPrint Observability",
+  "timezone": "browser",
+  "refresh": "5s",
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "API Latency (Avg)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "rate(http_request_duration_seconds_sum[1m]) / rate(http_request_duration_seconds_count[1m])",
+          "legendFormat": "Avg Latency (s)"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "API Error Rate",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "rate(api_errors_total[1m])",
+          "legendFormat": "Errors / sec"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Cache Hit Ratio (%)",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(cache_hits_total[1m])) / (sum(rate(cache_hits_total[1m])) + sum(rate(cache_misses_total[1m]))) * 100",
+          "legendFormat": "Hit Ratio"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Queue Depth",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 8 },
+      "targets": [
+        {
+          "expr": "queue_depth_active",
+          "legendFormat": "Active"
+        },
+        {
+          "expr": "queue_depth_waiting",
+          "legendFormat": "Waiting"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Queue Processing Rate",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 8 },
+      "targets": [
+        {
+          "expr": "rate(queue_jobs_completed_total[1m])",
+          "legendFormat": "Jobs / sec"
+        }
+      ]
+    }
+  ]
+}
