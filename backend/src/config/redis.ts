@@ -8,6 +8,17 @@
 import Redis from 'ioredis';
 import logger from './logger';
 import { env } from './env';
+import { Counter } from 'prom-client';
+
+export const cacheHits = new Counter({
+  name: 'cache_hits_total',
+  help: 'Total number of successful cache hits',
+});
+
+export const cacheMisses = new Counter({
+  name: 'cache_misses_total',
+  help: 'Total number of cache misses',
+});
 
 /** Set to false when Redis is unavailable. Always check before reads/writes. */
 export let cacheAvailable = false;
@@ -91,7 +102,13 @@ export function getRedisClient(): Redis {
 export async function cacheGet(key: string): Promise<string | null> {
   if (!cacheAvailable || !redisClient) return null;
   try {
-    return await redisClient.get(key);
+    const val = await redisClient.get(key);
+    if (val) {
+      cacheHits.inc();
+    } else {
+      cacheMisses.inc();
+    }
+    return val;
   } catch (err) {
     logger.warn('[redis] cacheGet error', { key, error: err });
     return null;
