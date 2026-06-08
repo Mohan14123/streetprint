@@ -180,7 +180,7 @@ interface NominatimResult {
   class?: string;
 }
 
-const SEARCH_DEBOUNCE_MS = 600;
+const SEARCH_DEBOUNCE_MS = 1200;
 const SEARCH_HISTORY_KEY = 'streetprint_search_history';
 const MAX_SEARCH_HISTORY = 8;
 
