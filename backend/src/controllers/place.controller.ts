@@ -192,3 +192,41 @@ export const updatePlace = asyncHandler(
     }
   },
 );
+
+// ────────────────────────────────────────────────────────────────
+// POST /places/overpass
+// Proxy for Overpass API to bypass browser CORS / User-Agent issues
+// ────────────────────────────────────────────────────────────────
+
+export const proxyOverpass = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response, _next: NextFunction): Promise<void> => {
+    const { query } = req.body;
+    if (!query || typeof query !== 'string') {
+      sendBadRequest(res, 'Query is required');
+      return;
+    }
+
+    try {
+      const response = await fetch('https://overpass-api.de/api/interpreter', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Accept': 'application/json',
+          'User-Agent': 'RouteMemoryApp/1.0 (mohansanjayrohini@gmail.com)'
+        },
+        body: `data=${encodeURIComponent(query)}`
+      });
+
+      if (!response.ok) {
+        throw new Error(`Overpass API responded with status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      sendSuccess(res, data);
+    } catch (err) {
+      console.error('[overpass-proxy] Error fetching POIs:', err);
+      sendError(res, 502, 'EXTERNAL_API_ERROR', 'Failed to fetch POIs from Overpass');
+    }
+  }
+);
+

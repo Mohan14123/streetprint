@@ -13,6 +13,7 @@ import {
   markVisited,
   deletePlace,
   updatePlace,
+  proxyOverpass
 } from '../controllers/place.controller';
 
 const router = Router();
@@ -31,6 +32,9 @@ router.patch('/:id/visited', markVisited);
 
 /** DELETE /places/:id — delete a saved place */
 router.delete('/:id', deletePlace);
+
+/** POST /places/overpass — proxy Overpass API calls to avoid CORS */
+router.post('/overpass', proxyOverpass);
 
 /** PATCH /places/:id — update a saved place's label, notes, or coordinates */
 router.patch('/:id', updatePlace);

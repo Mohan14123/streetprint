@@ -11,6 +11,8 @@
  *   - Single request at a time (abort previous)
  */
 
+import { apiClient } from './client';
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
@@ -134,21 +136,12 @@ export async function fetchPOIs(
   const query = buildQuery(south, west, north, east);
 
   try {
-    const resp = await fetch('https://overpass-api.de/api/interpreter', {
-      method: 'POST',
-      body: `data=${encodeURIComponent(query)}`,
-      headers: { 
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Accept': 'application/json'
-      },
-      signal: activeController.signal,
-    });
-
-    if (!resp.ok) {
-      throw new Error(`Overpass API error: ${resp.status}`);
-    }
-
-    const json = (await resp.json()) as OverpassResponse;
+    const { data: responseBody } = await apiClient.post<{ data: OverpassResponse }>(
+      '/places/overpass',
+      { query },
+      { signal: activeController.signal }
+    );
+    const json = responseBody.data;
 
     const pois: OverpassPOI[] = json.elements
       .filter((el) => el.type === 'node' && el.lat && el.lon)
