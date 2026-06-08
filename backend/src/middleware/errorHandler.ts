@@ -15,6 +15,13 @@ import {
   ErrorCode,
 } from '../utils/responseHelper';
 import { env } from '../config/env';
+import { Counter } from 'prom-client';
+
+export const apiErrors = new Counter({
+  name: 'api_errors_total',
+  help: 'Total number of API errors caught by the global error handler',
+  labelNames: ['status_code', 'error_code']
+});
 
 /** Shape of errors thrown from services with an attached `code` property */
 interface AppError extends Error {
@@ -77,6 +84,8 @@ export function globalErrorHandler(
     env.NODE_ENV === 'development'
       ? { stack: err.stack, originalMessage: err.message }
       : undefined;
+
+  apiErrors.inc({ status_code: statusCode, error_code: code });
 
   sendError(res, statusCode, code, message, details);
 }
