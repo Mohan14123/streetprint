@@ -2,8 +2,8 @@
   <img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/map-pinned.svg" alt="StreetPrint Logo" width="80" height="80">
   <h1 align="center">StreetPrint 📍</h1>
   <p align="center">
-    ![CI Status](https://github.com/Mohan14123/streetprint/actions/workflows/test.yml/badge.svg)
-    ![Coverage](https://img.shields.io/badge/coverage-85%25-brightgreen.svg)
+    <img src="https://github.com/Mohan14123/streetprint/actions/workflows/test.yml/badge.svg" alt="CI Status">
+    <img src="https://img.shields.io/badge/coverage-85%25-brightgreen.svg" alt="Coverage">
   </p>
   <p align="center">
     <strong>My Geospatial Route Tracking Capstone Project!</strong>
