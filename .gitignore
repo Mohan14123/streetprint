@@ -69,3 +69,10 @@ errors.md
 readme_changes.md
 resumechanges.md
 future.md
+
+# ──────────────────────────────────────────────
+# Load Testing Scripts
+# ──────────────────────────────────────────────
+k6-test.js
+k6-gps-test.js
+k6-ingestion-test.js
