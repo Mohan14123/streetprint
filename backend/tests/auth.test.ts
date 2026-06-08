@@ -118,3 +118,113 @@ describe('POST /auth/refresh', () => {
     expect(res.body.data.accessToken.split('.')).toHaveLength(3);
   });
 });
+
+// ────────────────────────────────────────────────────────────────
+// POST /auth/register
+// ────────────────────────────────────────────────────────────────
+
+describe('POST /auth/register', () => {
+  it('should register a new user successfully', async () => {
+    const res = await supertest(app)
+      .post('/api/auth/register')
+      .send({
+        email: 'newreg@example.com',
+        password: 'Password123!',
+        displayName: 'New Reg'
+      })
+      .expect(201);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data).toHaveProperty('accessToken');
+    expect(res.body.data).toHaveProperty('refreshToken');
+    expect(res.body.data.user.email).toBe('newreg@example.com');
+  });
+
+  it('should fail if email is already taken', async () => {
+    await createTestUser(app, 'taken@example.com');
+    const res = await supertest(app)
+      .post('/api/auth/register')
+      .send({
+        email: 'taken@example.com',
+        password: 'Password123!',
+        displayName: 'Taken'
+      })
+      .expect(409);
+    expect(res.body.success).toBe(false);
+    expect(res.body.error.code).toBe('AUTH_EMAIL_TAKEN');
+  });
+
+  it('should fail with Zod validation error for invalid email', async () => {
+    const res = await supertest(app)
+      .post('/api/auth/register')
+      .send({ email: 'not-an-email', password: 'Password123!', displayName: 'Test' })
+      .expect(400);
+    expect(res.body.success).toBe(false);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────
+// POST /auth/login
+// ────────────────────────────────────────────────────────────────
+
+describe('POST /auth/login', () => {
+  it('should login successfully', async () => {
+    await createTestUser(app, 'login@example.com', 'Password123!');
+    const res = await supertest(app)
+      .post('/api/auth/login')
+      .send({ email: 'login@example.com', password: 'Password123!' })
+      .expect(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data).toHaveProperty('accessToken');
+  });
+
+  it('should fail with invalid credentials', async () => {
+    await createTestUser(app, 'login2@example.com', 'Password123!');
+    const res = await supertest(app)
+      .post('/api/auth/login')
+      .send({ email: 'login2@example.com', password: 'wrongpassword' })
+      .expect(401);
+    expect(res.body.success).toBe(false);
+    expect(res.body.error.code).toBe('AUTH_CREDENTIALS_INVALID');
+  });
+});
+
+// ────────────────────────────────────────────────────────────────
+// POST /auth/logout
+// ────────────────────────────────────────────────────────────────
+
+describe('POST /auth/logout', () => {
+  it('should logout successfully', async () => {
+    const user = await createTestUser(app);
+    const res = await supertest(app)
+      .post('/api/auth/logout')
+      .set('Authorization', `Bearer ${user.accessToken}`)
+      .send({ refreshToken: user.refreshToken })
+      .expect(200);
+    expect(res.body.success).toBe(true);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────
+// Forgot / Reset Password / Verify Email
+// ────────────────────────────────────────────────────────────────
+
+describe('Auth - password reset & verify email', () => {
+  it('should send forgot password email', async () => {
+    await createTestUser(app, 'forgot@example.com');
+    const res = await supertest(app)
+      .post('/api/auth/forgot-password')
+      .send({ email: 'forgot@example.com' })
+      .expect(200);
+    expect(res.body.success).toBe(true);
+  });
+
+  it('should resend verification email', async () => {
+    const user = await createTestUser(app, 'verify@example.com');
+    const res = await supertest(app)
+      .post('/api/auth/resend-verification')
+      .set('Authorization', `Bearer ${user.accessToken}`)
+      .send({})
+      .expect(200);
+    expect(res.body.success).toBe(true);
+  });
+});

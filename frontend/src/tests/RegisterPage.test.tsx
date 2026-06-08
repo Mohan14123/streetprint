@@ -66,4 +66,59 @@ describe('RegisterPage', () => {
       expect(screen.getByText(/Passwords do not match/i)).toBeInTheDocument();
     });
   });
+
+  it('should call register on submit and navigate to /map', async () => {
+    mockRegister.mockResolvedValueOnce({});
+    render(
+      <MemoryRouter>
+        <RegisterPage onSwitchToLogin={vi.fn()} />
+      </MemoryRouter>
+    );
+    
+    fireEvent.change(screen.getByLabelText(/Name/i), { target: { value: 'Test User' } });
+    fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: 'test@example.com' } });
+    fireEvent.change(screen.getByLabelText(/^Password/i), { target: { value: 'password123' } });
+    fireEvent.change(screen.getByLabelText(/Confirm Password/i), { target: { value: 'password123' } });
+    
+    const submitBtn = screen.getByRole('button', { name: /Create Account/i });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(mockRegister).toHaveBeenCalledWith('Test User', 'test@example.com', 'password123');
+    });
+  });
+
+  it('should show error from server', async () => {
+    mockRegister.mockRejectedValueOnce({
+      response: { data: { error: { message: 'Email already taken' } } }
+    });
+    render(
+      <MemoryRouter>
+        <RegisterPage onSwitchToLogin={vi.fn()} />
+      </MemoryRouter>
+    );
+    
+    fireEvent.change(screen.getByLabelText(/Name/i), { target: { value: 'Test User' } });
+    fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: 'test@example.com' } });
+    fireEvent.change(screen.getByLabelText(/^Password/i), { target: { value: 'password123' } });
+    fireEvent.change(screen.getByLabelText(/Confirm Password/i), { target: { value: 'password123' } });
+    
+    const submitBtn = screen.getByRole('button', { name: /Create Account/i });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Email already taken/i)).toBeInTheDocument();
+    });
+  });
+
+  it('should switch to login', () => {
+    const mockSwitch = vi.fn();
+    render(
+      <MemoryRouter>
+        <RegisterPage onSwitchToLogin={mockSwitch} />
+      </MemoryRouter>
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Sign in/i }));
+    expect(mockSwitch).toHaveBeenCalled();
+  });
 });

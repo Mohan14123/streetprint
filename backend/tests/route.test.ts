@@ -212,3 +212,26 @@ describe('POST /route/end', () => {
     expect(endRes.body.data.tags).toContain('exploration');
   });
 });
+
+// ────────────────────────────────────────────────────────────────
+// GET /route
+// ────────────────────────────────────────────────────────────────
+
+describe('GET /route', () => {
+  it('should return user routes', async () => {
+    const res = await supertest(app).get('/api/route').set('Authorization', `Bearer ${accessToken}`).expect(200);
+    expect(res.body.success).toBe(true);
+    expect(Array.isArray(res.body.data.routes)).toBe(true);
+  });
+});
+
+describe('POST /route/update - Error cases', () => {
+  it('should return 404 for missing session', async () => {
+    const res = await supertest(app)
+      .post('/api/route/update')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ sessionId: '00000000-0000-0000-0000-000000000000', coordinates: TEST_COORDS.validSequence })
+      .expect(404);
+    expect(res.body.success).toBe(false);
+  });
+});

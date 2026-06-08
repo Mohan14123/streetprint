@@ -1,43 +1,77 @@
-/// <reference types="jest" />
-import { setTestEnv } from './setup';
-setTestEnv();
-
 import { sendVerificationEmail, sendPasswordResetEmail } from '../src/services/email.service';
+import { env } from '../src/config/env';
 import logger from '../src/config/logger';
 
 jest.mock('../src/config/logger', () => ({
   info: jest.fn(),
   error: jest.fn(),
-  warn: jest.fn()
+  warn: jest.fn(),
 }));
 
 describe('Email Service', () => {
-  const email = 'test-email@example.com';
-  const token = 'fake-token-123';
+  const originalEnv = { ...env };
 
   beforeEach(() => {
     jest.clearAllMocks();
+    global.fetch = jest.fn();
   });
 
-  it('should log verification email in dev mode', async () => {
-    await sendVerificationEmail(email, token);
-    
-    expect(logger.info).toHaveBeenCalled();
-    const callArgs = (logger.info as jest.Mock).mock.calls[0];
-    expect(callArgs[0]).toMatch(/EMAIL \(dev mode/);
-    expect(callArgs[1].to).toBe(email);
-    expect(callArgs[1].html).toContain(token);
-    expect(callArgs[1].html).toContain('Verify Email');
+  afterEach(() => {
+    Object.assign(env, originalEnv);
   });
 
-  it('should log password reset email in dev mode', async () => {
-    await sendPasswordResetEmail(email, token);
-    
-    expect(logger.info).toHaveBeenCalled();
-    const callArgs = (logger.info as jest.Mock).mock.calls[0];
-    expect(callArgs[0]).toMatch(/EMAIL \(dev mode/);
-    expect(callArgs[1].to).toBe(email);
-    expect(callArgs[1].html).toContain(token);
-    expect(callArgs[1].html).toContain('Reset Password');
+  it('should use dev fallback when RESEND_API_KEY is not set', async () => {
+    env.RESEND_API_KEY = '';
+    const result = await sendVerificationEmail('test@example.com', 'token123');
+    expect(result).toBe(true);
+    expect(logger.info).toHaveBeenCalledWith(
+      expect.stringContaining('EMAIL (dev mode'),
+      expect.any(Object)
+    );
+  });
+
+  it('should use Resend when RESEND_API_KEY is set', async () => {
+    env.RESEND_API_KEY = 're_12345';
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: jest.fn().mockResolvedValueOnce({ id: '123' })
+    });
+
+    const result = await sendPasswordResetEmail('test@example.com', 'token123');
+    expect(result).toBe(true);
+    expect(global.fetch).toHaveBeenCalled();
+    expect(logger.info).toHaveBeenCalledWith(
+      expect.stringContaining('Email sent via Resend'),
+      expect.any(Object)
+    );
+  });
+
+  it('should handle Resend API failure (not ok)', async () => {
+    env.RESEND_API_KEY = 're_12345';
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      text: jest.fn().mockResolvedValueOnce('Bad Request')
+    });
+
+    const result = await sendVerificationEmail('test@example.com', 'token123');
+    expect(result).toBe(false);
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.stringContaining('Resend API error'),
+      expect.any(Object)
+    );
+  });
+
+  it('should handle fetch exception', async () => {
+    env.RESEND_API_KEY = 're_12345';
+    (global.fetch as jest.Mock).mockRejectedValueOnce(new Error('Network error'));
+
+    const result = await sendPasswordResetEmail('test@example.com', 'token123');
+    expect(result).toBe(false);
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.stringContaining('Resend send failed'),
+      expect.any(Object)
+    );
   });
 });

@@ -108,3 +108,57 @@ describe('POST /places/save', () => {
     expect(res2.body.data.place._id).toBe(firstPlaceId);
   });
 });
+
+// ────────────────────────────────────────────────────────────────
+// GET /places
+// ────────────────────────────────────────────────────────────────
+
+describe('GET /places', () => {
+  it('should get all saved places', async () => {
+    await supertest(app).post('/api/places/save').set('Authorization', `Bearer ${accessToken}`).send(TEST_COORDS.place);
+    const res = await supertest(app).get('/api/places').set('Authorization', `Bearer ${accessToken}`).expect(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.places.length).toBeGreaterThan(0);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────
+// PATCH /places/:id/visited
+// ────────────────────────────────────────────────────────────────
+
+describe('PATCH /places/:id/visited', () => {
+  it('should mark a place as visited', async () => {
+    const saveRes = await supertest(app).post('/api/places/save').set('Authorization', `Bearer ${accessToken}`).send(TEST_COORDS.place);
+    const placeId = saveRes.body.data.place._id;
+    const res = await supertest(app).patch(`/api/places/${placeId}/visited`).set('Authorization', `Bearer ${accessToken}`).expect(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.place.visited).toBe(true);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────
+// PATCH /places/:id
+// ────────────────────────────────────────────────────────────────
+
+describe('PATCH /places/:id', () => {
+  it('should update place details', async () => {
+    const saveRes = await supertest(app).post('/api/places/save').set('Authorization', `Bearer ${accessToken}`).send(TEST_COORDS.place);
+    const placeId = saveRes.body.data.place._id;
+    const res = await supertest(app).patch(`/api/places/${placeId}`).set('Authorization', `Bearer ${accessToken}`).send({ label: 'Updated Cafe' }).expect(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.place.label).toBe('Updated Cafe');
+  });
+});
+
+// ────────────────────────────────────────────────────────────────
+// DELETE /places/:id
+// ────────────────────────────────────────────────────────────────
+
+describe('DELETE /places/:id', () => {
+  it('should delete a place', async () => {
+    const saveRes = await supertest(app).post('/api/places/save').set('Authorization', `Bearer ${accessToken}`).send(TEST_COORDS.place);
+    const placeId = saveRes.body.data.place._id;
+    const res = await supertest(app).delete(`/api/places/${placeId}`).set('Authorization', `Bearer ${accessToken}`).expect(200);
+    expect(res.body.success).toBe(true);
+  });
+});

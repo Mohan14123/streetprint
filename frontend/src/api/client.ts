@@ -43,9 +43,9 @@ function processQueue(error: unknown, token: string | null): void {
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
-    const original = error.config as (typeof error.config & { _retry?: boolean });
+    const original = error.config as (typeof error.config & { _retry?: boolean, _isRefreshRequest?: boolean });
 
-    if (error.response?.status === 401 && !original?._retry) {
+    if (error.response?.status === 401 && !original?._retry && !original?._isRefreshRequest) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
@@ -65,7 +65,7 @@ apiClient.interceptors.response.use(
         }
         const { data } = await apiClient.post<{ data: { accessToken: string } }>('/auth/refresh', {
           refreshToken: storedRefresh,
-        });
+        }, { _isRefreshRequest: true } as any);
         const newToken  = data.data.accessToken;
         localStorage.setItem('rm_access_token', newToken);
         processQueue(null, newToken);

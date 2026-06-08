@@ -8,6 +8,7 @@ import Route from '../src/models/Route';
 import { cacheGet, cacheSet } from '../src/config/redis';
 import { createTestUser } from './helpers';
 import app from '../src/app';
+import supertest from 'supertest';
 
 jest.mock('../src/config/redis', () => ({
   cacheGet: jest.fn(),
@@ -89,5 +90,24 @@ describe('Suggestion Service (Grid-based)', () => {
 
   it('should throw an error for invalid coordinates', async () => {
     await expect(getSuggestions(userId, 95, 200, 2000)).rejects.toThrow(/Invalid WGS84 coordinates/);
+  });
+  it('should return suggestions from controller', async () => {
+    const user = await createTestUser(app, 'sugg-ctrl@example.com');
+    const res = await supertest(app)
+      .get('/api/suggestions?lat=12.9716&lng=77.5946&radius=2000')
+      .set('Authorization', `Bearer ${user.accessToken}`)
+      .expect(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data).toHaveProperty('unexploredZones');
+    expect(res.body.data).toHaveProperty('popularNearbyRoutes');
+  });
+
+  it('should fail with invalid query parameters', async () => {
+    const user = await createTestUser(app, 'sugg-ctrl2@example.com');
+    const res = await supertest(app)
+      .get('/api/suggestions?lat=900&lng=77.5946')
+      .set('Authorization', `Bearer ${user.accessToken}`)
+      .expect(400);
+    expect(res.body.success).toBe(false);
   });
 });
