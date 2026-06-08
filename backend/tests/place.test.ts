@@ -1,3 +1,4 @@
+/// <reference types="jest" />
 /**
  * tests/place.test.ts
  * Integration tests for /places endpoints.

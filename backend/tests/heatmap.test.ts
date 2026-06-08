@@ -1,3 +1,4 @@
+/// <reference types="jest" />
 /**
  * tests/heatmap.test.ts
  * Integration tests for /heatmap endpoint.

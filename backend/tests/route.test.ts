@@ -1,3 +1,4 @@
+/// <reference types="jest" />
 /**
  * tests/route.test.ts
  * Integration tests for /route endpoints.

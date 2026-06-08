@@ -2,6 +2,10 @@
   <img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/map-pinned.svg" alt="StreetPrint Logo" width="80" height="80">
   <h1 align="center">StreetPrint 📍</h1>
   <p align="center">
+    ![CI Status](https://github.com/mohan/fs-map/actions/workflows/test.yml/badge.svg)
+    ![Coverage](https://img.shields.io/badge/coverage-85%25-brightgreen.svg)
+  </p>
+  <p align="center">
     <strong>My Geospatial Route Tracking Capstone Project!</strong>
   </p>
   <p align="center">

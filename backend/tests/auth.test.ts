@@ -1,3 +1,4 @@
+/// <reference types="jest" />
 /**
  * tests/auth.test.ts
  * Integration tests for auth middleware and /auth endpoints.

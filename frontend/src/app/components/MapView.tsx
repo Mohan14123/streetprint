@@ -323,7 +323,7 @@ export function MapView() {
   const { user } = useAuth();
 
   const [sheetState, setSheetState] = useState<'collapsed' | 'half' | 'expanded'>('collapsed');
-  const [heatmapMode, setHeatmapMode] = useState<'my-routes' | 'community' | 'unexplored'>('my-routes');
+  const [heatmapMode, setHeatmapMode] = useState<'my-routes' | 'unexplored'>('my-routes');
 
   const sheetRef = useRef<HTMLDivElement>(null);
 
@@ -355,14 +355,14 @@ export function MapView() {
   }, []);
 
   // Update position from tracking when active
-  const latestTrackingPosition: [number, number] | null =
-    tracking.liveRoute.length > 0
-      ? (() => {
-          const last = tracking.liveRoute[tracking.liveRoute.length - 1];
-          // liveRoute coords are [lng, lat] (GeoJSON) → reverse for Leaflet
-          return [last[1], last[0]];
-        })()
-      : null;
+  const latestTrackingPosition: [number, number] | null = useMemo(() => {
+    if (tracking.liveRoute.length > 0) {
+      const last = tracking.liveRoute[tracking.liveRoute.length - 1];
+      // liveRoute coords are [lng, lat] (GeoJSON) → reverse for Leaflet
+      return [last[1], last[0]];
+    }
+    return null;
+  }, [tracking.liveRoute, tracking.liveRoute.length]);
 
   const displayPosition = latestTrackingPosition ?? userPosition;
   const currentAccuracy = tracking.currentAccuracy ?? accuracyRadius;
@@ -525,6 +525,7 @@ export function MapView() {
   // ── Heatmap data ──────────────────────────────────────────────────────────
   const [heatmapPoints, setHeatmapPoints] = useState<HeatmapPoint[]>([]);
   const currentBoundsRef = useRef<string>('');
+  const heatmapDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchHeatmap = useCallback(async (bounds: string) => {
     if (!bounds) return;
@@ -539,9 +540,13 @@ export function MapView() {
     }
   }, [heatmapMode, user?.id]);
 
+  // Debounced bounds change handler — prevents 429 API spam (errors.md #5)
   const handleBoundsChange = useCallback((bounds: string) => {
     currentBoundsRef.current = bounds;
-    void fetchHeatmap(bounds);
+    if (heatmapDebounceRef.current) clearTimeout(heatmapDebounceRef.current);
+    heatmapDebounceRef.current = setTimeout(() => {
+      void fetchHeatmap(bounds);
+    }, 600);
   }, [fetchHeatmap]);
 
   // Re-fetch when heatmap mode changes
@@ -679,10 +684,38 @@ export function MapView() {
     setRecenterKey(k => k + 1);
   }, []);
 
-  // ── Overpass POI Layer ─────────────────────────────────────────────────────
+
+  // ── Overpass POI Layer (spatial caching — errors.md #7) ────────────────────
   const [showPOIs, setShowPOIs] = useState(false);
   const [poiData, setPOIData] = useState<OverpassPOI[]>([]);
   const poiDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Spatial cache: store fetched POIs for a larger area, filter locally on pan
+  const poiCacheRef = useRef<{
+    center: [number, number]; // [lat, lng] of fetch center
+    pois: OverpassPOI[];
+    fetchRadiusKm: number;
+  } | null>(null);
+
+  const POI_FETCH_RADIUS_KM = 2.5;    // Fetch POIs in a 2.5km radius
+  const POI_REFETCH_THRESHOLD_KM = 1;  // Re-fetch only when center drifts >1km
+
+  // Haversine for cache distance check (lat/lng order)
+  const poiHaversine = useCallback((a: [number, number], b: [number, number]): number => {
+    const R = 6_371;
+    const toRad = (d: number) => (d * Math.PI) / 180;
+    const dLat = toRad(b[0] - a[0]);
+    const dLng = toRad(b[1] - a[1]);
+    const h = Math.sin(dLat / 2) ** 2 +
+      Math.cos(toRad(a[0])) * Math.cos(toRad(b[0])) * Math.sin(dLng / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+  }, []);
+
+  // Filter cached POIs to fit current viewport bounds
+  const filterPOIsToViewport = useCallback((pois: OverpassPOI[], boundsStr: string): OverpassPOI[] => {
+    const [west, south, east, north] = boundsStr.split(',').map(Number);
+    return pois.filter(p => p.lat >= south && p.lat <= north && p.lng >= west && p.lng <= east);
+  }, []);
 
   // Fetch POIs when bounds change and zoom >= 14
   const handlePOIBoundsChange = useCallback((boundsStr: string, zoom: number) => {
@@ -690,27 +723,67 @@ export function MapView() {
       setPOIData([]);
       return;
     }
+
+    const [west, south, east, north] = boundsStr.split(',').map(Number);
+    const viewCenter: [number, number] = [(south + north) / 2, (west + east) / 2];
+
+    // Check if cached data covers the current viewport
+    if (poiCacheRef.current) {
+      const distFromCache = poiHaversine(poiCacheRef.current.center, viewCenter);
+      if (distFromCache < POI_REFETCH_THRESHOLD_KM) {
+        // Cache hit — filter locally, no API call
+        setPOIData(filterPOIsToViewport(poiCacheRef.current.pois, boundsStr));
+        return;
+      }
+    }
+
+    // Cache miss — debounce and fetch a larger area
     if (poiDebounceRef.current) clearTimeout(poiDebounceRef.current);
     poiDebounceRef.current = setTimeout(async () => {
       try {
-        const [west, south, east, north] = boundsStr.split(',').map(Number);
-        const pois = await fetchPOIs(south, west, north, east);
-        setPOIData(pois);
+        // Expand bounds to ~2.5km radius from center
+        const degOffset = POI_FETCH_RADIUS_KM / 111; // ~1 degree ≈ 111km
+        const fetchSouth = viewCenter[0] - degOffset;
+        const fetchNorth = viewCenter[0] + degOffset;
+        const fetchWest = viewCenter[1] - degOffset;
+        const fetchEast = viewCenter[1] + degOffset;
+
+        const pois = await fetchPOIs(fetchSouth, fetchWest, fetchNorth, fetchEast);
+
+        // Update cache
+        poiCacheRef.current = {
+          center: viewCenter,
+          pois,
+          fetchRadiusKm: POI_FETCH_RADIUS_KM,
+        };
+
+        // Filter to viewport and display
+        setPOIData(filterPOIsToViewport(pois, boundsStr));
       } catch {
         // Non-fatal
       }
-    }, 1000);
-  }, [showPOIs]);
+    }, 1500);
+  }, [showPOIs, poiHaversine, filterPOIsToViewport]);
+
+  // ── Stable ZoomTracker callback (fixes infinite render loop — errors.md #1) ─
+  const onZoomChangeTracker = useCallback((z: number) => {
+    handleZoomChange(z);
+    if (currentBoundsRef.current) {
+      handlePOIBoundsChange(currentBoundsRef.current, z);
+    }
+  }, [handleZoomChange, handlePOIBoundsChange]);
 
   // Re-fetch when POI toggle changes
   useEffect(() => {
     if (showPOIs && currentBoundsRef.current && currentZoom >= 14) {
-      const [west, south, east, north] = currentBoundsRef.current.split(',').map(Number);
-      void fetchPOIs(south, west, north, east).then(setPOIData).catch(() => { /* non-fatal */ });
+      // Invalidate cache on toggle
+      poiCacheRef.current = null;
+      handlePOIBoundsChange(currentBoundsRef.current, currentZoom);
     } else if (!showPOIs) {
       setPOIData([]);
+      poiCacheRef.current = null;
     }
-  }, [showPOIs, currentZoom]);
+  }, [showPOIs, currentZoom, handlePOIBoundsChange]);
 
   // Create POI icons lazily
   const createPOIIcon = useCallback((emoji: string) => {
@@ -867,12 +940,7 @@ export function MapView() {
             }} />
 
             {/* Zoom tracker for heatmap scaling */}
-            <ZoomTracker onZoomChange={(z) => {
-              handleZoomChange(z);
-              if (currentBoundsRef.current) {
-                handlePOIBoundsChange(currentBoundsRef.current, z);
-              }
-            }} />
+            <ZoomTracker onZoomChange={onZoomChangeTracker} />
 
             {/* POI markers from Overpass */}
             {showPOIs && poiData.map((poi) => {
@@ -1055,7 +1123,7 @@ export function MapView() {
       {/* Heatmap Toggle Panel */}
       <div className="absolute top-24 inset-x-0 flex justify-center z-20 pointer-events-none">
         <div className="bg-[var(--sp-bg-overlay)] backdrop-blur-xl border border-[var(--sp-border-strong)] p-1 rounded-full flex gap-1 pointer-events-auto shadow-lg">
-          {(['my-routes', 'community', 'unexplored'] as const).map((mode) => (
+          {(['my-routes', 'unexplored'] as const).map((mode) => (
             <button
               key={mode}
               onClick={() => setHeatmapMode(mode)}

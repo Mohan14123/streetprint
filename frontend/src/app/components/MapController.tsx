@@ -16,9 +16,20 @@ interface MapControllerProps {
 export function MapController({ position, isTracking }: MapControllerProps) {
   const map = useMap();
   const isFirstPosition = useRef(true);
+  const prevPosition = useRef<[number, number] | null>(null);
 
   useEffect(() => {
     if (!position) return;
+
+    // Deep compare to prevent infinite flyTo loops from new array references
+    if (
+      prevPosition.current &&
+      prevPosition.current[0] === position[0] &&
+      prevPosition.current[1] === position[1]
+    ) {
+      return;
+    }
+    prevPosition.current = position;
 
     if (isFirstPosition.current) {
       // First position — snap immediately (no animation)

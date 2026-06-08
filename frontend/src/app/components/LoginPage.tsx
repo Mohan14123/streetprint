@@ -143,7 +143,7 @@ export function LoginPage({ onSwitchToRegister }: LoginPageProps) {
           </form>
 
           {/* Switch to register */}
-          <div className="mt-6 text-center">
+          <div className="mt-6 text-center space-y-3">
             <p className="text-sm" style={{ color: 'var(--sp-text-muted)' }}>
               Don&apos;t have an account?{' '}
               <button
