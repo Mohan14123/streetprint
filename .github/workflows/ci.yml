@@ -62,6 +62,8 @@ jobs:
     needs: [backend-ci, frontend-ci]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
+    env:
+      REPO: placeholder
     permissions:
       contents: read
       packages: write
