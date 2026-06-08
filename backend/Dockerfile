@@ -17,7 +17,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 
 # Install all dependencies (including devDependencies for tsc)
-RUN npm ci
+RUN npm install
 
 # Copy source code (excluding files in .dockerignore)
 COPY tsconfig.json ./
@@ -37,7 +37,7 @@ RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 # Copy package files and install production-only deps
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev && npm cache clean --force
+RUN npm install --omit=dev && npm cache clean --force
 
 # Copy compiled output from builder stage
 COPY --from=builder /app/dist ./dist
