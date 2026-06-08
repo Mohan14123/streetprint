@@ -65,6 +65,7 @@ function buildQuery(south: number, west: number, north: number, east: number): s
   ).join('\n  ');
 
   return `
+/* RouteMemoryApp/1.0 - Vercel Deployment */
 [out:json][timeout:15];
 (
   ${nodeQueries}
@@ -136,7 +137,10 @@ export async function fetchPOIs(
     const resp = await fetch('https://overpass-api.de/api/interpreter', {
       method: 'POST',
       body: `data=${encodeURIComponent(query)}`,
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      headers: { 
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Accept': 'application/json'
+      },
       signal: activeController.signal,
     });
 
